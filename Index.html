@@ -1,0 +1,135 @@
+<!doctype html>
+
+<html lang="si">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Source Preview — මෙයම source බලන්න</title>
+  <style>
+    :root{--bg:#0f1724;--card:#0b1220;--muted:#9aa4b2;--accent:#7dd3fc}
+    html,body{height:100%;margin:0;font-family:Inter,ui-sans-serif,system-ui,Segoe UI,Roboto,'Noto Sans',Arial}
+    body{background:linear-gradient(180deg,#071126 0%, #071830 100%);color:#e6eef6;display:flex;align-items:center;justify-content:center;padding:24px}
+    .wrap{width:100%;max-width:980px;background:var(--card);border-radius:14px;box-shadow:0 10px 30px rgba(2,6,23,.6);overflow:hidden}
+    header{display:flex;gap:12px;align-items:center;padding:18px 20px;border-bottom:1px solid rgba(255,255,255,.03)}
+    h1{font-size:18px;margin:0;color:#fff}
+    p.lead{margin:0;color:var(--muted);font-size:13px}
+    .controls{display:flex;gap:10px;margin-left:auto}
+    button{background:transparent;border:1px solid rgba(255,255,255,.06);padding:8px 12px;border-radius:10px;color:var(--muted);cursor:pointer;font-weight:600}
+    button.primary{background:linear-gradient(90deg,#0369a1,#0891b2);border:0;color:white}
+    main{display:flex;gap:0}
+    .panel{flex:1;padding:18px}
+    pre{white-space:pre-wrap;word-wrap:break-word;overflow:auto;max-height:60vh;padding:14px;background:#071126;border-radius:10px;border:1px solid rgba(255,255,255,.02);font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:13px;color:#cfeefe}
+    .note{font-size:12px;color:var(--muted);margin-top:8px}
+    .actions{display:flex;gap:8px;margin-top:12px}
+    .small{font-size:12px;padding:6px 10px}
+    footer{padding:12px 18px;border-top:1px solid rgba(255,255,255,.02);font-size:13px;color:var(--muted);display:flex;align-items:center}
+    .hidden{display:none}
+  </style>
+</head>
+<body>
+  <div class="wrap" role="main">
+    <header>
+      <div>
+        <h1>වෙබ්පේජ්‌ Source Preview</h1>
+        <p class="lead">මෙම පිටුවේ සම්පූර්ණ source (HTML) පහතින් copy කරන්න, download කරන්න හෝ edit කරන්න.</p>
+      </div>
+      <div class="controls">
+        <button id="btnCopy" class="small">Copy source</button>
+        <button id="btnDownload" class="small">Download .html</button>
+        <button id="btnToggle" class="small">Hide HTML</button>
+      </div>
+    </header><main>
+  <div class="panel">
+    <strong>Source (HTML)</strong>
+    <pre id="sourcePre" aria-label="page source">loading...</pre>
+    <div class="note">මෙහි ඇති කොඩ් එක ඔබට copy කරගෙන වෙනත් වෙබ්‌පිටුවක් හෝ editor එකට paste කරන්න පුළුවන්.</div>
+    <div class="actions">
+      <button id="btnCopy2" class="primary small">Copy</button>
+      <button id="btnDownload2" class="small">Download HTML</button>
+    </div>
+  </div>
+</main>
+
+<footer>
+  <div>Tip: ඔබට source preview එකට වෙනස් කිරීමක් කරලා save කරගන්න පුළුවන් — ඒකට copy කර editor තුල paste කරන්න.</div>
+</footer>
+
+  </div>  <script>
+    // Escape HTML for showing in <pre>
+    function escapeHtml(s){
+      return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+    }
+
+    function setSourceText(text){
+      const pre = document.getElementById('sourcePre');
+      pre.textContent = escapeHtml(text);
+    }
+
+    // Grab the full HTML of the page (self-referential)
+    function getFullHtml(){
+      // We want the full outerHTML of the document element
+      return '<!doctype html>\n' + document.documentElement.outerHTML.replace(/^\s+|\s+$/g,'');
+    }
+
+    // Copy to clipboard helper
+    async function copyToClipboard(text){
+      try{
+        await navigator.clipboard.writeText(text);
+        return true;
+      }catch(e){
+        // fallback
+        const ta = document.createElement('textarea');
+        ta.value = text; document.body.appendChild(ta); ta.select();
+        try{ document.execCommand('copy'); document.body.removeChild(ta); return true;}catch(e2){document.body.removeChild(ta); return false}
+      }
+    }
+
+    // Download helper
+    function downloadFile(filename, text){
+      const blob = new Blob([text], {type:'text/html'});
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url; a.download = filename; document.body.appendChild(a); a.click();
+      setTimeout(()=>{ URL.revokeObjectURL(url); a.remove(); }, 500);
+    }
+
+    // Initialize
+    (function(){
+      const html = getFullHtml();
+      setSourceText(html);
+
+      const btnCopy = document.getElementById('btnCopy');
+      const btnCopy2 = document.getElementById('btnCopy2');
+      const btnDownload = document.getElementById('btnDownload');
+      const btnDownload2 = document.getElementById('btnDownload2');
+      const btnToggle = document.getElementById('btnToggle');
+      const pre = document.getElementById('sourcePre');
+
+      async function doCopy(){
+        const ok = await copyToClipboard(html);
+        if(ok){
+          btnCopy.textContent = 'Copied ✓'; btnCopy2.textContent = 'Copied ✓';
+          setTimeout(()=>{btnCopy.textContent='Copy source';btnCopy2.textContent='Copy'},1200);
+        }else{
+          btnCopy.textContent = 'Copy failed';
+        }
+      }
+
+      btnCopy.addEventListener('click', doCopy);
+      btnCopy2.addEventListener('click', doCopy);
+
+      btnDownload.addEventListener('click', ()=> downloadFile('page-source.html', html));
+      btnDownload2.addEventListener('click', ()=> downloadFile('page-source.html', html));
+
+      let visible = true;
+      btnToggle.addEventListener('click', ()=>{
+        visible = !visible;
+        pre.style.display = visible ? 'block' : 'none';
+        btnToggle.textContent = visible ? 'Hide HTML' : 'Show HTML';
+      });
+
+      // If someone views this page via other host or server, still show HTML.
+      // If the HTML is large, keep pre scrollable.
+    })();
+  </script></body>
+</html>
