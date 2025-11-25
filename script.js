@@ -1,11 +1,10 @@
-/* ---------------------------   A/L & O/L Exam Countdown - Complete Version   Author: Sadeepa & Shamika ----------------------------*/
+/* --------------------------- A/L & O/L Exam Countdown - Auto Backend Version --------------------------- */
 
+// Configuration - YOUR JSONBIN ACCOUNT
 const CONFIG = {
-    GIST: {
-        ID: '945dca85d6001969271c74f68a453efb', // 👈 ඔබේ නව Gist ID එක
-        OWNER: 'sadeepa0813',
-        FILENAME: 'comments.json',
-        TOKEN: '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'
+    BACKEND: {
+        BIN_ID: '6925cbcad0ea881f40ff82ef',
+        API_KEY: '$2a$10$eD7DG.b7Ngrpiz0peWnxsear8BVFZxBNDP0HpUig7HXXQ.cGbvn02'
     },
     WHATSAPP: {
         BOT: '94705179349',
@@ -24,8 +23,10 @@ const CONFIG = {
         'ol': new Date('2024-01-01')
     }
 };
-const GIST_API_URL = `https://api.github.com/gists/${CONFIG.GIST.ID}`;
-const GIST_RAW_URL = `https://gist.githubusercontent.com/sadeepa0813/945dca85d6001969271c74f68a453efb/raw/10e9e9073bce5c49a3a437412ba4a1a97ffa1ca8/comments.json`;
+
+// Backend URLs - YOUR BIN
+const BACKEND_GET_URL = `https://api.jsonbin.io/v3/b/${CONFIG.BACKEND.BIN_ID}/latest`;
+const BACKEND_PUT_URL = `https://api.jsonbin.io/v3/b/${CONFIG.BACKEND.BIN_ID}`;
 
 // Global Variables
 let currentBatch = '2026';
@@ -164,7 +165,7 @@ function detectDefaultBatch() {
     }
 }
 
-// Quotes
+// Quotes (මීට පෙර තිබූ quotes objects එකම තියන්න)
 const quotes = {
     "01": "ජීවිතය එය මත රඳා පවතිනවාක් මෙන් ඔබේ සිහින හඹා යන්න ✨",
     "02": "සාර්ථකත්වය කව්රුත් ලබා දෙන්නේ නැත, එබැවින් එය උපයා ගැනීමට උත්සාහ කරන්න! 🌟",
@@ -265,9 +266,7 @@ function switchBatch(batch) {
         if (batch === 'ol') mainLogo.classList.add('logo-ol');
     }
 
-    // Show batch toast
     showBatchToast(batch);
-
     updateCountdown();
     getDailyQuote();
 }
@@ -283,7 +282,6 @@ function showBatchToast(batch) {
 
     if (!toast) return;
 
-    // Set icon and colors
     icon.className = 'batch-toast-icon';
     if (batch === '2026') {
         icon.classList.add('batch-toast-icon-2026');
@@ -306,20 +304,14 @@ function showBatchToast(batch) {
         date.textContent = 'November 2025';
     }
 
-    // Calculate days remaining
     const now = new Date();
     const targetDate = CONFIG.EXAM_DATES[batch];
     const diff = targetDate - now;
     const daysRemaining = Math.max(0, Math.floor(diff / (1000 * 60 * 60 * 24)));
     days.textContent = `${daysRemaining} days`;
 
-    // Show toast
     toast.classList.add('show');
-
-    // Auto hide after 4 seconds
-    setTimeout(() => {
-        closeBatchToast();
-    }, 4000);
+    setTimeout(() => closeBatchToast(), 4000);
 }
 
 function closeBatchToast() {
@@ -520,7 +512,6 @@ function enableWhatsAppButton() {
         waBtn.style.opacity = '1';
         waBtn.style.cursor = 'pointer';
         
-        // Event listener එකතු කිරීම
         waBtn.addEventListener('click', function() {
             const message = `Hi 👋\nA/L Exam Countdown Bot වලට ඔබව සාදරයෙන් පිළිගනිමු!\nකරුණාකර "activate" බටන් එක දබන්න.`;
             openWhatsApp(CONFIG.WHATSAPP.BOT, message);
@@ -538,19 +529,13 @@ function showUpdateNotification() {
     const notification = document.getElementById('updateNotification');
     if (notification) {
         notification.classList.add('show');
-
-        // 10 seconds auto hide
-        setTimeout(() => {
-            closeUpdateNotification();
-        }, 10000);
+        setTimeout(() => closeUpdateNotification(), 10000);
     }
 }
 
 function closeUpdateNotification() {
     const notification = document.getElementById('updateNotification');
-    if (notification) {
-        notification.classList.remove('show');
-    }
+    if (notification) notification.classList.remove('show');
 }
 
 function viewUpdateDetails() {
@@ -567,11 +552,9 @@ function viewUpdateDetails() {
 
 // User Name Management
 function getUserName() {
-    // localStorage වලින් user name එක ලබා ගන්න
     let userName = localStorage.getItem('exam_countdown_username');
     
     if (!userName) {
-        // User name නැතිනම් prompt එකක් දෙන්න
         userName = prompt('කරුණාකර ඔබේ නම ඇතුළත් කරන්න:', '');
         if (userName && userName.trim() !== '') {
             userName = userName.trim();
@@ -596,124 +579,87 @@ function changeUserName() {
     }
 }
 
-// Comments System - Enhanced Version with GitHub Gist
-async function updateGistWithComment(newComment) {
+// Auto Backend Comments System
+async function updateBackendWithComment(newComment) {
     try {
-        console.log('Updating Gist with new comment...');
+        console.log('🔄 Updating backend with new comment...');
         
-        // පවතින comments ලබා ගන්න
-        const response = await fetch(GIST_API_URL);
+        // Get existing comments from backend
+        const response = await fetch(BACKEND_GET_URL);
         if (!response.ok) {
-            console.error('Failed to fetch gist:', response.status);
-            throw new Error('Failed to fetch gist');
+            console.log('❌ Backend fetch failed, saving locally');
+            return false;
         }
         
-        const gistData = await response.json();
-        const currentContent = gistData.files[CONFIG.GIST.FILENAME].content;
-        let currentComments = [];
+        const data = await response.json();
+        let currentComments = data.record?.comments || [];
         
-        try {
-            const parsedData = JSON.parse(currentContent);
-            currentComments = parsedData.comments || [];
-        } catch (e) {
-            console.log('No existing comments or parse error, starting fresh');
-            currentComments = [];
-        }
-        
-        // නව comment එකතු කරන්න
+        // Add new comment
         currentComments.unshift(newComment);
         
-        // Gist අප්ඩේට් කරන්න
-        const updateResponse = await fetch(GIST_API_URL, {
-            method: 'PATCH',
+        // Update backend
+        const updateResponse = await fetch(BACKEND_PUT_URL, {
+            method: 'PUT',
             headers: {
-                'Authorization': `token ${CONFIG.GIST.TOKEN}`,
                 'Content-Type': 'application/json',
+                'X-Master-Key': CONFIG.BACKEND.API_KEY
             },
             body: JSON.stringify({
-                files: {
-                    [CONFIG.GIST.FILENAME]: {
-                        content: JSON.stringify({
-                            comments: currentComments
-                        }, null, 2)
-                    }
-                }
+                comments: currentComments,
+                lastUpdated: new Date().toISOString(),
+                totalComments: currentComments.length
             })
         });
         
         if (!updateResponse.ok) {
-            console.error('Failed to update gist:', updateResponse.status);
-            throw new Error('Failed to update gist');
+            console.log('❌ Backend update failed, saving locally');
+            return false;
         }
         
-        console.log('Gist updated successfully');
+        console.log('✅ Backend updated successfully!');
         return true;
+        
     } catch (error) {
-        console.error('Gist update error:', error);
+        console.error('❌ Backend update error:', error);
         return false;
     }
 }
 
-async function loadCommentsFromGist() {
+async function loadCommentsFromBackend() {
     try {
-        console.log('Loading comments from Gist...');
-        const response = await fetch(GIST_RAW_URL + '?t=' + Date.now());
+        console.log('🔄 Loading comments from backend...');
+        
+        const response = await fetch(BACKEND_GET_URL + '?t=' + Date.now());
         if (!response.ok) {
-            console.error('Failed to fetch comments:', response.status);
             throw new Error('Failed to fetch comments');
         }
         
         const data = await response.json();
-        comments = data.comments || [];
+        comments = data.record?.comments || [];
         
-        // localStorage එකට backup කරන්න
+        // Backup to localStorage
         localStorage.setItem('exam_countdown_comments', JSON.stringify(comments));
         
         renderComments();
         updateCommentsCount();
-        console.log('Comments loaded successfully:', comments.length);
+        console.log(`✅ Loaded ${comments.length} comments from backend`);
         return true;
-    } catch (error) {
-        console.error('Error loading comments from gist:', error);
-        return false;
-    }
-}
-
-async function loadComments() {
-    try {
-        // පළමුව localStorage වලින් පෙන්වන්න (වේගවත් ප්‍රතිචාරය සඳහා)
-        const storedComments = localStorage.getItem('exam_countdown_comments');
-        if (storedComments) {
-            comments = JSON.parse(storedComments);
-            renderComments();
-            updateCommentsCount();
-        }
-        
-        // පසුව Gist වලින් නවතම comments ලබා ගන්න
-        const success = await loadCommentsFromGist();
-        if (!success) {
-            useFallbackComments();
-        }
         
     } catch (error) {
-        console.error('Load comments error:', error);
-        useFallbackComments();
-    }
-}
-
-function useFallbackComments() {
-    try {
+        console.error('❌ Error loading comments:', error);
+        
+        // Fallback to localStorage
         const stored = localStorage.getItem('exam_countdown_comments');
         if (stored) {
             comments = JSON.parse(stored);
         } else {
             comments = [];
         }
-    } catch (error) {
-        comments = [];
+        
+        renderComments();
+        updateCommentsCount();
+        return false;
     }
-    renderComments();
-    updateCommentsCount();
 }
 
 function renderComments() {
@@ -737,9 +683,6 @@ function renderComments() {
                     <i class="fas fa-heart"></i>
                     <span>${comment.likes}</span>
                 </button>
-                ${comment.author === currentUser ? `<button class="comment-action edit-btn" onclick="editComment(${comment.id})" title="Edit">
-                    <i class="fas fa-edit"></i>
-                </button>` : ''}
             </div>
         </div>
     `).join('');
@@ -779,7 +722,6 @@ function toggleLike(commentId) {
     }
 
     renderComments();
-    // Save updated comments to localStorage
     localStorage.setItem('exam_countdown_comments', JSON.stringify(comments));
 }
 
@@ -800,7 +742,6 @@ async function submitComment() {
         return;
     }
 
-    // Submit button disable කරන්න
     submitBtn.disabled = true;
     submitBtn.innerHTML = '<span class="loading-spinner"></span> යොමු කරමින්...';
 
@@ -813,42 +754,29 @@ async function submitComment() {
     };
 
     try {
-        console.log('Submitting comment to Gist...');
+        // 1. LOCAL STORAGE - ALWAYS SAVE
+        comments.unshift(newComment);
+        localStorage.setItem('exam_countdown_comments', JSON.stringify(comments));
         
-        // Gist එකට comment එකතු කිරීමට උත්සාහ කරන්න
-        const success = await updateGistWithComment(newComment);
+        // 2. INSTANT DISPLAY
+        renderComments();
+        updateCommentsCount();
+        input.value = '';
+        updateCharCount();
         
-        if (success) {
-            // සාර්ථකයි නම් local comments අප්ඩේට් කරන්න
-            comments.unshift(newComment);
-            localStorage.setItem('exam_countdown_comments', JSON.stringify(comments));
-            
-            renderComments();
-            updateCommentsCount();
-            input.value = '';
-            updateCharCount();
-            
-            showNotification('✅', 'අදහස සාර්ථකව යොමු කළා! සියල්ලන්ට පෙනේ!');
-            console.log('Comment submitted successfully to Gist');
-            
+        // 3. BACKEND UPLOAD - AUTO WORKING
+        const backendSuccess = await updateBackendWithComment(newComment);
+        
+        if (backendSuccess) {
+            showNotification('✅', 'අදහස සාර්ථකව යොමු කළා! සියලුම අයට පෙනේ! 🎉');
         } else {
-            // Gist fail වුනොත් local storage එකට save කරන්න
-            comments.unshift(newComment);
-            localStorage.setItem('exam_countdown_comments', JSON.stringify(comments));
-            
-            renderComments();
-            updateCommentsCount();
-            input.value = '';
-            updateCharCount();
-            
-            showNotification('⚠️', 'අදහස සුරකින ලදී! (Local Only)');
-            console.log('Comment saved locally only');
+            showNotification('⚠️', 'අදහස සුරකින ලදී! (Backend issue)');
         }
+        
     } catch (error) {
         console.error('Submit comment error:', error);
-        showAlert('❌', 'දෝෂයක්', 'අදහස යොමු කිරීමට නොහැකි විය. නැවත උත්සාහ කරන්න.');
+        showNotification('✅', 'අදහස සුරකින ලදී! (Local)');
     } finally {
-        // Submit button යථා තත්වයට පත් කරන්න
         submitBtn.disabled = false;
         submitBtn.textContent = 'අදහස් යොමු කරන්න';
     }
@@ -863,7 +791,6 @@ function updateCharCount() {
     const count = input.value.length;
     charCount.textContent = count;
 
-    // Change color if approaching limit
     if (count > 450) {
         charCount.style.color = 'var(--error)';
     } else if (count > 400) {
@@ -944,7 +871,6 @@ function createScrollToTopButton() {
     scrollBtn.style.display = 'none';
     document.body.appendChild(scrollBtn);
     
-    // පිටුව පොරවන විට පෙන්වන්න/සඟවන්න
     window.addEventListener('scroll', function() {
         if (window.pageYOffset > 300) {
             scrollBtn.style.display = 'flex';
@@ -992,36 +918,62 @@ function createUserNameButton() {
     document.body.appendChild(userBtn);
 }
 
+// Load Comments Function
+async function loadComments() {
+    try {
+        // First show from localStorage (instant)
+        const storedComments = localStorage.getItem('exam_countdown_comments');
+        if (storedComments) {
+            comments = JSON.parse(storedComments);
+            renderComments();
+            updateCommentsCount();
+        }
+        
+        // Then load from backend (background)
+        setTimeout(async () => {
+            try {
+                await loadCommentsFromBackend();
+            } catch (error) {
+                console.error('Background sync failed:', error);
+            }
+        }, 1000);
+        
+    } catch (error) {
+        console.error('Load comments error:', error);
+    }
+}
+
+// Auto-refresh comments
+function startCommentRefresh() {
+    setInterval(async () => {
+        try {
+            await loadCommentsFromBackend();
+        } catch (error) {
+            console.error('Auto-refresh failed:', error);
+        }
+    }, 30000); // 30 seconds
+}
+
 // Initialize App
 function initializeApp() {
-    // Get user name first
     currentUser = getUserName();
-    
-    // Detect default batch
     const defaultBatch = detectDefaultBatch();
     switchBatch(defaultBatch);
-
-    // Load comments
+    
     loadComments();
-
-    // Set up periodic comment refresh (every 30 seconds)
-    setInterval(loadComments, 30000);
-
+    startCommentRefresh();
+    
     getDailyQuote();
     updateCountdown();
     updateCurrentTime();
-
-    // Create scroll to top button
     createScrollToTopButton();
-    
-    // Create user name change button
     createUserNameButton();
-    
-    // Enable WhatsApp button
     enableWhatsAppButton();
-
-    // Show update notification
+    
     setTimeout(showUpdateNotification, 2000);
+    
+    console.log('🚀 App initialized with YOUR JSONBIN BACKEND!');
+    console.log('Bin ID:', CONFIG.BACKEND.BIN_ID);
 }
 
 // Start timers
@@ -1032,6 +984,4 @@ setInterval(getDailyQuote, 3600000);
 // Initialize on load
 document.addEventListener('DOMContentLoaded', initializeApp);
 
-console.log('🚀 A/L & O/L Exam Countdown (Complete Version) initialized!');
-console.log('GitHub Token configured:', CONFIG.GIST.TOKEN ? 'Yes' : 'No');
-console.log('Current User:', currentUser);
+console.log('🚀 A/L & O/L Exam Countdown - YOUR JSONBIN VERSION');
