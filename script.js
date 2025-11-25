@@ -25,7 +25,7 @@ const CONFIG = {
     }
 };
 const GIST_API_URL = `https://api.github.com/gists/${CONFIG.GIST.ID}`;
-const GIST_RAW_URL = `https://gist.githubusercontent.com/${CONFIG.GIST.OWNER}/${CONFIG.GIST.ID}/raw/${CONFIG.GIST.FILENAME}`;
+const GIST_RAW_URL = `https://gist.githubusercontent.com/sadeepa0813/945dca85d6001969271c74f68a453efb/raw/10e9e9073bce5c49a3a437412ba4a1a97ffa1ca8/comments.json`;
 
 // Global Variables
 let currentBatch = '2026';
