@@ -596,38 +596,53 @@
         </div>
         
         <!-- 评论部分 -->
-        <div class="comments-section">
-            <div class="comments-header">
-                <h3 class="comments-title">
-                    <i class="fas fa-comments"></i>
-                    වෙබ් අදහස්
-                </h3>
-                <span class="comments-count" id="commentsCount">0 අදහස්</span>
-            </div>
-            
-            <div class="comment-form">
-                <textarea 
-                    class="comment-input" 
-                    id="commentInput" 
-                    placeholder="මෙම වෙබ් අඩවිය ගැන ඔබගේ අදහස් මෙතැනින් ලියන්න..."
-                    maxlength="500"
-                ></textarea>
-                <div class="comment-actions">
-                    <div class="comment-char-count">
-                        <span id="charCount">0</span> / 500
-                    </div>
-                    <button class="comment-submit" id="commentSubmit" onclick="submitComment()">
-                        අදහස් යොමු කරන්න
-                    </button>
-                </div>
-            </div>
-            
-            <div class="comments-list" id="commentsList">
-                <div class="empty-comments">
-                    තවම කිසිම අදහසක් නැත. පළමු අදහස ලියන්න!
-                </div>
+<div class="comments-section">
+    <div class="comments-header">
+        <h3 class="comments-title">
+            <i class="fas fa-comments"></i>
+            COMMENTS
+        </h3>
+        <span class="comments-count" id="commentsCount">0 අදහස්</span>
+    </div>
+    
+    <div class="comment-form">
+        <!-- නම් input field එක එකතු කිරීම -->
+        <div class="name-input-group">
+            <input 
+                type="text" 
+                class="comment-name-input" 
+                id="commentNameInput" 
+                placeholder="ඔබේ නම (අනිවාර්ය නොවේ)" 
+                maxlength="20"
+                value=""
+            >
+            <div class="name-char-count">
+                <span id="nameCharCount">0</span> / 20
             </div>
         </div>
+        
+        <textarea 
+            class="comment-input" 
+            id="commentInput" 
+            placeholder="මෙම වෙබ් අඩවිය ගැන ඔබගේ අදහස් මෙතැනින් ලියන්න..."
+            maxlength="500"
+        ></textarea>
+        <div class="comment-actions">
+            <div class="comment-char-count">
+                <span id="charCount">0</span> / 500
+            </div>
+            <button class="comment-submit" id="commentSubmit" onclick="submitComment()">
+                අදහස් යොමු කරන්න
+            </button>
+        </div>
+    </div>
+    
+    <div class="comments-list" id="commentsList">
+        <div class="empty-comments">
+            තවම කිසිම අදහසක් නැත. පළමු අදහස ලියන්න!
+        </div>
+    </div>
+</div>
         
         <div class="card whatsapp-section">
             <div class="wa-buttons">
