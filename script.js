@@ -1,4 +1,4 @@
-/* --------------------------- A/L & O/L Exam Countdown - Auto Backend Version --------------------------- */
+/* --------------------------- A/L & O/L Exam Countdown - Enhanced UI/UX Version --------------------------- */
 
 // Configuration - UPDATED JSONBIN ACCOUNT
 const CONFIG = {
@@ -553,23 +553,74 @@ function viewUpdateDetails() {
     );
 }
 
-// User Name Management
+// Enhanced User Name Management with Beautiful Modal
 function getUserName() {
     let userName = localStorage.getItem('exam_countdown_username');
     
     if (!userName) {
-        userName = prompt('කරුණාකර ඔබේ නම ඇතුළත් කරන්න:', '');
-        if (userName && userName.trim() !== '') {
-            userName = userName.trim();
-            localStorage.setItem('exam_countdown_username', userName);
-            showNotification('👋', `සාදරයෙන් පිළිගනිමු ${userName}!`);
-        } else {
-            userName = 'අනාමික';
-            localStorage.setItem('exam_countdown_username', userName);
-        }
+        return new Promise((resolve) => {
+            // Create beautiful modal
+            const modal = document.createElement('div');
+            modal.className = 'name-modal-overlay';
+            modal.innerHTML = `
+                <div class="name-modal">
+                    <div class="name-modal-header">
+                        <div class="name-modal-icon">👤</div>
+                        <h3>ඔබේ නම ඇතුළත් කරන්න</h3>
+                        <p>ඔබේ අදහස් පළ කිරීමට නමක් අවශ්‍යයි</p>
+                    </div>
+                    <div class="name-modal-body">
+                        <input type="text" id="nameInput" placeholder="ඔබේ නම..." maxlength="20" class="name-input">
+                        <div class="name-modal-actions">
+                            <button class="anonymous-btn" onclick="setAnonymousName()">අනාමිකව</button>
+                            <button class="submit-name-btn" onclick="submitUserName()">සුරකින්න</button>
+                        </div>
+                    </div>
+                </div>
+            `;
+            
+            document.body.appendChild(modal);
+            
+            // Auto focus on input
+            setTimeout(() => {
+                const nameInput = document.getElementById('nameInput');
+                if (nameInput) nameInput.focus();
+            }, 300);
+            
+            // Handle Enter key in name input
+            const nameInput = document.getElementById('nameInput');
+            if (nameInput) {
+                nameInput.addEventListener('keydown', function(e) {
+                    if (e.key === 'Enter') {
+                        submitUserName();
+                    }
+                });
+            }
+            
+            window.submitUserName = function() {
+                const nameInput = document.getElementById('nameInput');
+                if (nameInput && nameInput.value.trim() !== '') {
+                    userName = nameInput.value.trim();
+                    localStorage.setItem('exam_countdown_username', userName);
+                    document.body.removeChild(modal);
+                    showNotification('👋', `සාදරයෙන් පිළිගනිමු ${userName}!`);
+                    resolve(userName);
+                } else {
+                    showNotification('⚠️', 'කරුණාකර නමක් ඇතුළත් කරන්න');
+                }
+            };
+            
+            window.setAnonymousName = function() {
+                userName = 'අනාමික';
+                localStorage.setItem('exam_countdown_username', userName);
+                document.body.removeChild(modal);
+                showNotification('👤', 'අනාමික පරිශීලකයා ලෙස සුරකින ලදී');
+                resolve(userName);
+            };
+        });
     }
     
-    return userName;
+    return Promise.resolve(userName);
 }
 
 function changeUserName() {
@@ -579,6 +630,7 @@ function changeUserName() {
         localStorage.setItem('exam_countdown_username', trimmedName);
         currentUser = trimmedName;
         showNotification('✅', `නම වෙනස් කරන ලදී: ${trimmedName}`);
+        renderComments();
     }
 }
 
@@ -693,11 +745,18 @@ function renderComments() {
     commentsList.innerHTML = comments.map(comment => {
         const isAuthor = comment.author === currentUser;
         const isEdited = comment.lastEdited && comment.lastEdited !== comment.timestamp;
+        const isAnonymous = comment.author === 'අනාමික';
         
         return `
         <div class="comment-item" data-comment-id="${comment.id}">
             <div class="comment-header">
-                <span class="comment-author">${comment.author}</span>
+                <div class="comment-author">
+                    ${comment.author}
+                    ${isAnonymous ? 
+                        '<span class="user-badge anonymous">අනාමික</span>' : 
+                        '<span class="user-badge">පරිශීලක</span>'
+                    }
+                </div>
                 <span class="comment-time">
                     ${formatTime(comment.timestamp)}
                     ${isEdited ? ' (edited)' : ''}
@@ -706,12 +765,8 @@ function renderComments() {
             <div class="comment-content">${comment.content}</div>
             <div class="comment-footer">
                 <button class="comment-action ${likedComments.has(comment.id) ? 'liked' : ''}" onclick="toggleLike(${comment.id})">
-                    <i class="fas fa-heart"></i>
+                    <i class="fas fa-heart heart-icon"></i>
                     <span>${comment.likes}</span>
-                </button>
-                <button class="comment-action reply-btn" onclick="startReply(${comment.id}, '${comment.author}')">
-                    <i class="fas fa-reply"></i>
-                    <span>Reply</span>
                 </button>
                 ${isAuthor ? `
                     <button class="comment-action edit-btn" onclick="startEdit(${comment.id})">
@@ -764,17 +819,6 @@ function toggleLike(commentId) {
 
     renderComments();
     localStorage.setItem('exam_countdown_comments', JSON.stringify(comments));
-}
-
-// Start replying to a comment
-function startReply(commentId, authorName) {
-    replyingTo = commentId;
-    const commentInput = document.getElementById('commentInput');
-    if (commentInput) {
-        commentInput.placeholder = `Replying to ${authorName}...`;
-        commentInput.focus();
-    }
-    showNotification('↩️', `Replying to ${authorName}`);
 }
 
 // Start editing a comment
@@ -877,7 +921,7 @@ async function updateBackendAfterDelete() {
     }
 }
 
-// Enhanced submit function with edit support
+// Enhanced submit function with edit support and Enter key handling
 async function submitComment() {
     const input = document.getElementById('commentInput');
     const submitBtn = document.getElementById('commentSubmit');
@@ -885,13 +929,15 @@ async function submitComment() {
     if (!input || !submitBtn) return;
 
     const content = input.value.trim();
-    if (!content) {
-        showAlert('⚠️', 'Empty Comment', 'කරුණාකර අදහසක් ලියන්න!');
+    
+    // Allow empty content for line breaks, but not for submission
+    if (content === '') {
+        showAlert('⚠️', 'හිස් අදහස', 'කරුණාකර අදහසක් ලියන්න!');
         return;
     }
 
     if (content.length > 500) {
-        showAlert('⚠️', 'Comment Too Long', 'අදහස 500 අකුරුවලින් අඩු විය යුතුය!');
+        showAlert('⚠️', 'දිගු අදහස', 'අදහස 500 අකුරුවලින් අඩු විය යුතුය!');
         return;
     }
 
@@ -902,9 +948,6 @@ async function submitComment() {
         if (editingComment) {
             // Edit existing comment
             await editExistingComment(editingComment, content);
-        } else if (replyingTo) {
-            // Reply to comment (you can add this later)
-            showNotification('ℹ️', 'Reply feature coming soon!');
         } else {
             // New comment
             await submitNewComment(content);
@@ -913,11 +956,10 @@ async function submitComment() {
         input.value = '';
         updateCharCount();
         cancelEdit();
-        cancelReply();
         
     } catch (error) {
         console.error('Submit comment error:', error);
-        showNotification('❌', 'Error submitting comment');
+        showNotification('❌', 'දෝෂයක්! නැවත උත්සාහ කරන්න');
     } finally {
         submitBtn.disabled = false;
         submitBtn.textContent = 'අදහස් යොමු කරන්න';
@@ -1010,15 +1052,6 @@ async function submitNewComment(content) {
     }
 }
 
-// Cancel reply
-function cancelReply() {
-    replyingTo = null;
-    const commentInput = document.getElementById('commentInput');
-    if (commentInput) {
-        commentInput.placeholder = 'ඔබේ අදහස් මෙහි ලියන්න...';
-    }
-}
-
 function updateCharCount() {
     const input = document.getElementById('commentInput');
     const charCount = document.getElementById('charCount');
@@ -1043,6 +1076,20 @@ function scrollToComments() {
         commentsSection.scrollIntoView({ behavior: 'smooth' });
     }
 }
+
+// Enhanced Enter key handling for comments
+document.addEventListener('DOMContentLoaded', function() {
+    const commentInput = document.getElementById('commentInput');
+    
+    if (commentInput) {
+        commentInput.addEventListener('keydown', function(e) {
+            if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) {
+                e.preventDefault();
+                submitComment();
+            }
+        });
+    }
+});
 
 // Character count listener
 document.addEventListener('input', function(e) {
@@ -1219,7 +1266,9 @@ async function testBackendConnection() {
 
 // Initialize App
 async function initializeApp() {
-    currentUser = getUserName();
+    // Get user name first (this will show the modal if needed)
+    currentUser = await getUserName();
+    
     const defaultBatch = detectDefaultBatch();
     switchBatch(defaultBatch);
     
@@ -1237,9 +1286,8 @@ async function initializeApp() {
     
     setTimeout(showUpdateNotification, 2000);
     
-    console.log('🚀 App initialized with UPDATED JSONBIN BACKEND!');
-    console.log('Bin ID:', CONFIG.BACKEND.BIN_ID);
-    console.log('Using API Key:', CONFIG.BACKEND.API_KEY);
+    console.log('🚀 App initialized with ENHANCED UI/UX!');
+    console.log('Current User:', currentUser);
 }
 
 // Start timers
@@ -1250,4 +1298,4 @@ setInterval(getDailyQuote, 3600000);
 // Initialize on load
 document.addEventListener('DOMContentLoaded', initializeApp);
 
-console.log('🚀 A/L & O/L Exam Countdown - ENHANCED WITH EDIT/DELETE');
+console.log('🚀 A/L & O/L Exam Countdown - ENHANCED WITH BEAUTIFUL UI/UX');
