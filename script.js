@@ -6,7 +6,7 @@ const CONFIG = {
         ID: '5ba047e2b5c15dee6ade09af9ee5d1e6',
         OWNER: 'sadeepa0813',
         FILENAME: 'comments.json',
-        TOKEN: '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' // ඔබේ GitHub Token එක මෙහි දමන්න
+        TOKEN: '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'
     },
     WHATSAPP: {
         BOT: '94705179349',
@@ -16,13 +16,13 @@ const CONFIG = {
         '2025': new Date('2025-11-10T00:00:00'),
         '2026': new Date('2026-08-03T00:00:00'),
         '2027': new Date('2027-08-02T00:00:00'),
-        'ol': new Date('2025-12-01T00:00:00') // O/L දිනය නිවැරදි කලා
+        'ol': new Date('2025-12-01T00:00:00')
     },
     STUDY_STARTS: {
         '2025': new Date('2024-01-01'),
         '2026': new Date('2025-01-01'),
         '2027': new Date('2026-01-01'),
-        'ol': new Date('2024-01-01') // O/L ආරම්භක දිනය නිවැරදි කලා
+        'ol': new Date('2024-01-01')
     }
 };
 
@@ -33,6 +33,7 @@ const GIST_RAW_URL = `https://gist.githubusercontent.com/${CONFIG.GIST.OWNER}/${
 let currentBatch = '2026';
 let comments = [];
 let likedComments = new Set();
+let currentUser = '';
 
 // Theme Toggle
 const themeToggle = document.getElementById('themeToggle');
@@ -566,20 +567,58 @@ function viewUpdateDetails() {
     );
 }
 
-// Comments System - Enhanced Version
+// User Name Management
+function getUserName() {
+    // localStorage වලින් user name එක ලබා ගන්න
+    let userName = localStorage.getItem('exam_countdown_username');
+    
+    if (!userName) {
+        // User name නැතිනම් prompt එකක් දෙන්න
+        userName = prompt('කරුණාකර ඔබේ නම ඇතුළත් කරන්න:', '');
+        if (userName && userName.trim() !== '') {
+            userName = userName.trim();
+            localStorage.setItem('exam_countdown_username', userName);
+            showNotification('👋', `සාදරයෙන් පිළිගනිමු ${userName}!`);
+        } else {
+            userName = 'අනාමික';
+            localStorage.setItem('exam_countdown_username', userName);
+        }
+    }
+    
+    return userName;
+}
+
+function changeUserName() {
+    const newName = prompt('නව නම ඇතුළත් කරන්න:', currentUser);
+    if (newName && newName.trim() !== '') {
+        const trimmedName = newName.trim();
+        localStorage.setItem('exam_countdown_username', trimmedName);
+        currentUser = trimmedName;
+        showNotification('✅', `නම වෙනස් කරන ලදී: ${trimmedName}`);
+    }
+}
+
+// Comments System - Enhanced Version with GitHub Gist
 async function updateGistWithComment(newComment) {
     try {
+        console.log('Updating Gist with new comment...');
+        
         // පවතින comments ලබා ගන්න
         const response = await fetch(GIST_API_URL);
-        if (!response.ok) throw new Error('Failed to fetch gist');
+        if (!response.ok) {
+            console.error('Failed to fetch gist:', response.status);
+            throw new Error('Failed to fetch gist');
+        }
         
         const gistData = await response.json();
         const currentContent = gistData.files[CONFIG.GIST.FILENAME].content;
         let currentComments = [];
         
         try {
-            currentComments = JSON.parse(currentContent).comments || [];
+            const parsedData = JSON.parse(currentContent);
+            currentComments = parsedData.comments || [];
         } catch (e) {
+            console.log('No existing comments or parse error, starting fresh');
             currentComments = [];
         }
         
@@ -604,8 +643,12 @@ async function updateGistWithComment(newComment) {
             })
         });
         
-        if (!updateResponse.ok) throw new Error('Failed to update gist');
+        if (!updateResponse.ok) {
+            console.error('Failed to update gist:', updateResponse.status);
+            throw new Error('Failed to update gist');
+        }
         
+        console.log('Gist updated successfully');
         return true;
     } catch (error) {
         console.error('Gist update error:', error);
@@ -615,8 +658,12 @@ async function updateGistWithComment(newComment) {
 
 async function loadCommentsFromGist() {
     try {
+        console.log('Loading comments from Gist...');
         const response = await fetch(GIST_RAW_URL + '?t=' + Date.now());
-        if (!response.ok) throw new Error('Failed to fetch comments');
+        if (!response.ok) {
+            console.error('Failed to fetch comments:', response.status);
+            throw new Error('Failed to fetch comments');
+        }
         
         const data = await response.json();
         comments = data.comments || [];
@@ -626,6 +673,7 @@ async function loadCommentsFromGist() {
         
         renderComments();
         updateCommentsCount();
+        console.log('Comments loaded successfully:', comments.length);
         return true;
     } catch (error) {
         console.error('Error loading comments from gist:', error);
@@ -644,7 +692,10 @@ async function loadComments() {
         }
         
         // පසුව Gist වලින් නවතම comments ලබා ගන්න
-        await loadCommentsFromGist();
+        const success = await loadCommentsFromGist();
+        if (!success) {
+            useFallbackComments();
+        }
         
     } catch (error) {
         console.error('Load comments error:', error);
@@ -688,6 +739,9 @@ function renderComments() {
                     <i class="fas fa-heart"></i>
                     <span>${comment.likes}</span>
                 </button>
+                ${comment.author === currentUser ? `<button class="comment-action edit-btn" onclick="editComment(${comment.id})" title="Edit">
+                    <i class="fas fa-edit"></i>
+                </button>` : ''}
             </div>
         </div>
     `).join('');
@@ -754,18 +808,17 @@ async function submitComment() {
 
     const newComment = {
         id: Date.now(),
-        author: "අනාමික",
+        author: currentUser,
         content: content,
         timestamp: new Date().toISOString(),
         likes: 0
     };
 
     try {
+        console.log('Submitting comment to Gist...');
+        
         // Gist එකට comment එකතු කිරීමට උත්සාහ කරන්න
-        let success = false;
-        if (CONFIG.GIST.TOKEN && CONFIG.GIST.TOKEN !== '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') {
-            success = await updateGistWithComment(newComment);
-        }
+        const success = await updateGistWithComment(newComment);
         
         if (success) {
             // සාර්ථකයි නම් local comments අප්ඩේට් කරන්න
@@ -777,7 +830,9 @@ async function submitComment() {
             input.value = '';
             updateCharCount();
             
-            showNotification('✅', 'අදහස සාර්ථකව යොමු කළා! (Public)');
+            showNotification('✅', 'අදහස සාර්ථකව යොමු කළා! සියල්ලන්ට පෙනේ!');
+            console.log('Comment submitted successfully to Gist');
+            
         } else {
             // Gist fail වුනොත් local storage එකට save කරන්න
             comments.unshift(newComment);
@@ -788,16 +843,12 @@ async function submitComment() {
             input.value = '';
             updateCharCount();
             
-            showNotification('✅', 'අදහස සුරකින ලදී! (Local)');
-            
-            // Token නැති බව දැනුම් දෙන්න
-            if (!CONFIG.GIST.TOKEN || CONFIG.GIST.TOKEN === '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') {
-                console.log('GitHub Token not configured. Comments are saved locally only.');
-            }
+            showNotification('⚠️', 'අදහස සුරකින ලදී! (Local Only)');
+            console.log('Comment saved locally only');
         }
     } catch (error) {
         console.error('Submit comment error:', error);
-        showAlert('❌', 'දෝෂයක්', 'අදහස යොමු කිරීමට නොහැකි විය.');
+        showAlert('❌', 'දෝෂයක්', 'අදහස යොමු කිරීමට නොහැකි විය. නැවත උත්සාහ කරන්න.');
     } finally {
         // Submit button යථා තත්වයට පත් කරන්න
         submitBtn.disabled = false;
@@ -905,8 +956,49 @@ function createScrollToTopButton() {
     });
 }
 
+// User name change button
+function createUserNameButton() {
+    const userBtn = document.createElement('button');
+    userBtn.className = 'user-name-btn';
+    userBtn.innerHTML = '👤';
+    userBtn.title = 'Change User Name';
+    userBtn.onclick = changeUserName;
+    userBtn.style.position = 'fixed';
+    userBtn.style.bottom = '200px';
+    userBtn.style.right = '24px';
+    userBtn.style.width = '50px';
+    userBtn.style.height = '50px';
+    userBtn.style.borderRadius = '50%';
+    userBtn.style.background = 'var(--accent)';
+    userBtn.style.color = 'white';
+    userBtn.style.border = 'none';
+    userBtn.style.fontSize = '20px';
+    userBtn.style.boxShadow = '0 6px 20px rgba(124, 58, 237, 0.4)';
+    userBtn.style.cursor = 'pointer';
+    userBtn.style.zIndex = '9996';
+    userBtn.style.display = 'flex';
+    userBtn.style.alignItems = 'center';
+    userBtn.style.justifyContent = 'center';
+    userBtn.style.transition = 'all var(--transition-speed) ease';
+    
+    userBtn.addEventListener('mouseenter', function() {
+        this.style.transform = 'scale(1.1)';
+        this.style.boxShadow = '0 8px 24px rgba(124, 58, 237, 0.6)';
+    });
+    
+    userBtn.addEventListener('mouseleave', function() {
+        this.style.transform = 'scale(1)';
+        this.style.boxShadow = '0 6px 20px rgba(124, 58, 237, 0.4)';
+    });
+    
+    document.body.appendChild(userBtn);
+}
+
 // Initialize App
 function initializeApp() {
+    // Get user name first
+    currentUser = getUserName();
+    
     // Detect default batch
     const defaultBatch = detectDefaultBatch();
     switchBatch(defaultBatch);
@@ -924,6 +1016,9 @@ function initializeApp() {
     // Create scroll to top button
     createScrollToTopButton();
     
+    // Create user name change button
+    createUserNameButton();
+    
     // Enable WhatsApp button
     enableWhatsAppButton();
 
@@ -940,3 +1035,5 @@ setInterval(getDailyQuote, 3600000);
 document.addEventListener('DOMContentLoaded', initializeApp);
 
 console.log('🚀 A/L & O/L Exam Countdown (Complete Version) initialized!');
+console.log('GitHub Token configured:', CONFIG.GIST.TOKEN ? 'Yes' : 'No');
+console.log('Current User:', currentUser);
