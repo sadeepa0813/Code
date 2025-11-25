@@ -5,7 +5,7 @@ const CONFIG = {
         ID: '945dca85d6001969271c74f68a453efb', // 👈 ඔබේ නව Gist ID එක
         OWNER: 'sadeepa0813',
         FILENAME: 'comments.json',
-        TOKEN: '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'
+        TOKEN: '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'
     },
     WHATSAPP: {
         BOT: '94705179349',
