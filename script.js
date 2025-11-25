@@ -1,9 +1,8 @@
 /* ---------------------------   A/L & O/L Exam Countdown - Complete Version   Author: Sadeepa & Shamika ----------------------------*/
 
-// Configuration
 const CONFIG = {
     GIST: {
-        ID: '5ba047e2b5c15dee6ade09af9ee5d1e6',
+        ID: '945dca85d6001969271c74f68a453efb', // 👈 ඔබේ නව Gist ID එක
         OWNER: 'sadeepa0813',
         FILENAME: 'comments.json',
         TOKEN: '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'
@@ -25,7 +24,6 @@ const CONFIG = {
         'ol': new Date('2024-01-01')
     }
 };
-
 const GIST_API_URL = `https://api.github.com/gists/${CONFIG.GIST.ID}`;
 const GIST_RAW_URL = `https://gist.githubusercontent.com/${CONFIG.GIST.OWNER}/${CONFIG.GIST.ID}/raw/${CONFIG.GIST.FILENAME}`;
 
