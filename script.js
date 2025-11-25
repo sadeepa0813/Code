@@ -1,10 +1,11 @@
 /* --------------------------- A/L & O/L Exam Countdown - Auto Backend Version --------------------------- */
 
-// Configuration - YOUR JSONBIN ACCOUNT
+// Configuration - UPDATED JSONBIN ACCOUNT
 const CONFIG = {
     BACKEND: {
         BIN_ID: '6925cbcad0ea881f40ff82ef',
-        API_KEY: '$2a$10$eD7DG.b7Ngrpiz0peWnxsear8BVFZxBNDP0HpUig7HXXQ.cGbvn02'
+        API_KEY: '$2a$10$FiJfon3yzXyaL8aqn0M.wOoFMXsTiXzsWSjUXTEVPFJ.dVbhphR6m',
+        ACCESS_KEY: '$2a$10$eD7DG.b7Ngrpiz0peWnxsear8BVFZxBNDP0HpUig7HXXQ.cGbvn02'
     },
     WHATSAPP: {
         BOT: '94705179349',
@@ -165,7 +166,7 @@ function detectDefaultBatch() {
     }
 }
 
-// Quotes (මීට පෙර තිබූ quotes objects එකම තියන්න)
+// Quotes
 const quotes = {
     "01": "ජීවිතය එය මත රඳා පවතිනවාක් මෙන් ඔබේ සිහින හඹා යන්න ✨",
     "02": "සාර්ථකත්වය කව්රුත් ලබා දෙන්නේ නැත, එබැවින් එය උපයා ගැනීමට උත්සාහ කරන්න! 🌟",
@@ -204,7 +205,7 @@ const quotes2026 = {
 
 const quotes2027 = {
     "01": "ප්‍රථම පියවර තමයි වඩාම වැදගත්! ආරම්භ කරන්න 🎯",
-    "02": "2027 A/L සඳහා දිගු ගමනක් ආරම්භ කරන්න. සෑම පියවරකම වැදගත් ✨",
+    "02": "2027 A/L සඳහා දිගු ගමනක් ආරම්භ කරන්න. සෑම පියවරක්ම වැදගත් ✨",
     "03": "අවුරුදු දෙකක් කාලයක් ඇත - මෙය ඔබේ හොඳම වාසියයි! 🌟",
     "04": "මුල සිටම සැලසුම් කරන්න. 2027 ජයග්‍රහණය අද ආරම්භ වේ! 📋",
     "05": "කාලය ඔබේ පාර්ශ්වයේ ඇත. එය සාර්ථකව භාවිතා කරන්න ⏰",
@@ -227,7 +228,7 @@ const quotesOL = {
     "04": "O/L ප්‍රතිඵල හොඳ නම්, A/L වලට සූදානම් වීම පහසු වේ 🌟",
     "05": "සෑම විෂයටම සමාන අවධානයක් දෙන්න. O/L වල සියල්ල වැදගත් 📖",
     "06": "2025 O/L batch ප්‍රමුඛයා වන්න! ඔබේ කාලයයි 🏆",
-    "07": "පළමු වරට සම්මත වෙන්න. නැවත සඳුදා තරගයක් නෙවෙයි 💪",
+    "07": "පළමු වරට සම්මත වන්න. නැවත සඳුදා තරගයක් නෙවෙයි 💪",
     "08": "O/L සාර්ථකත්වය A/L සාර්ථකත්වයට මග පාදයි 🚀",
     "09": "පළමු විශාල ජයග්‍රහණය O/L වලින් ආරම්භ වේ 🎊",
     "10": "හොඳ ප්‍රතිලයක් ලබා ගෙන ඔබේ පවුලේ ගෞරවය වර්ධනය කරන්න 💎",
@@ -579,32 +580,44 @@ function changeUserName() {
     }
 }
 
-// Auto Backend Comments System
+// Enhanced Backend Functions with NEW API KEYS
 async function updateBackendWithComment(newComment) {
     try {
         console.log('🔄 Updating backend with new comment...');
         
-        // Get existing comments from backend
-        const response = await fetch(BACKEND_GET_URL);
-        if (!response.ok) {
-            console.log('❌ Backend fetch failed, saving locally');
-            return false;
+        // Get existing data first
+        const getResponse = await fetch(BACKEND_GET_URL, {
+            headers: {
+                'X-Master-Key': CONFIG.BACKEND.API_KEY,
+                'X-Bin-Meta': false
+            }
+        });
+        
+        if (!getResponse.ok) {
+            throw new Error(`Failed to fetch: ${getResponse.status}`);
         }
         
-        const data = await response.json();
-        let currentComments = data.record?.comments || [];
+        const existingData = await getResponse.json();
+        let currentComments = existingData.comments || [];
         
         // Add new comment
         currentComments.unshift(newComment);
+        
+        // Limit comments to prevent overflow
+        if (currentComments.length > 1000) {
+            currentComments = currentComments.slice(0, 500);
+        }
         
         // Update backend
         const updateResponse = await fetch(BACKEND_PUT_URL, {
             method: 'PUT',
             headers: {
                 'Content-Type': 'application/json',
-                'X-Master-Key': CONFIG.BACKEND.API_KEY
+                'X-Master-Key': CONFIG.BACKEND.API_KEY,
+                'X-Bin-Versioning': false
             },
             body: JSON.stringify({
+                ...existingData,
                 comments: currentComments,
                 lastUpdated: new Date().toISOString(),
                 totalComments: currentComments.length
@@ -612,8 +625,7 @@ async function updateBackendWithComment(newComment) {
         });
         
         if (!updateResponse.ok) {
-            console.log('❌ Backend update failed, saving locally');
-            return false;
+            throw new Error(`Failed to update: ${updateResponse.status}`);
         }
         
         console.log('✅ Backend updated successfully!');
@@ -629,13 +641,19 @@ async function loadCommentsFromBackend() {
     try {
         console.log('🔄 Loading comments from backend...');
         
-        const response = await fetch(BACKEND_GET_URL + '?t=' + Date.now());
+        const response = await fetch(BACKEND_GET_URL + '?t=' + Date.now(), {
+            headers: {
+                'X-Master-Key': CONFIG.BACKEND.API_KEY,
+                'X-Bin-Meta': false
+            }
+        });
+        
         if (!response.ok) {
-            throw new Error('Failed to fetch comments');
+            throw new Error(`HTTP ${response.status}: ${response.statusText}`);
         }
         
         const data = await response.json();
-        comments = data.record?.comments || [];
+        comments = data.comments || [];
         
         // Backup to localStorage
         localStorage.setItem('exam_countdown_comments', JSON.stringify(comments));
@@ -651,13 +669,45 @@ async function loadCommentsFromBackend() {
         // Fallback to localStorage
         const stored = localStorage.getItem('exam_countdown_comments');
         if (stored) {
-            comments = JSON.parse(stored);
+            try {
+                comments = JSON.parse(stored);
+            } catch (e) {
+                comments = [];
+            }
         } else {
             comments = [];
         }
         
         renderComments();
         updateCommentsCount();
+        return false;
+    }
+}
+
+// Backend Connection Test
+async function testBackendConnection() {
+    try {
+        console.log('🧪 Testing backend connection...');
+        
+        const response = await fetch(BACKEND_GET_URL, {
+            headers: {
+                'X-Master-Key': CONFIG.BACKEND.API_KEY
+            }
+        });
+        
+        if (response.ok) {
+            const data = await response.json();
+            console.log('✅ Backend connection successful!', data);
+            showNotification('✅', 'Backend connected successfully!');
+            return true;
+        } else {
+            console.log('❌ Backend connection failed:', response.status);
+            showNotification('⚠️', 'Backend connection failed');
+            return false;
+        }
+    } catch (error) {
+        console.error('❌ Backend test error:', error);
+        showNotification('❌', 'Backend connection error');
         return false;
     }
 }
@@ -955,10 +1005,13 @@ function startCommentRefresh() {
 }
 
 // Initialize App
-function initializeApp() {
+async function initializeApp() {
     currentUser = getUserName();
     const defaultBatch = detectDefaultBatch();
     switchBatch(defaultBatch);
+    
+    // Test backend connection first
+    await testBackendConnection();
     
     loadComments();
     startCommentRefresh();
@@ -972,8 +1025,9 @@ function initializeApp() {
     
     setTimeout(showUpdateNotification, 2000);
     
-    console.log('🚀 App initialized with YOUR JSONBIN BACKEND!');
+    console.log('🚀 App initialized with UPDATED JSONBIN BACKEND!');
     console.log('Bin ID:', CONFIG.BACKEND.BIN_ID);
+    console.log('Using API Key:', CONFIG.BACKEND.API_KEY);
 }
 
 // Start timers
@@ -984,4 +1038,4 @@ setInterval(getDailyQuote, 3600000);
 // Initialize on load
 document.addEventListener('DOMContentLoaded', initializeApp);
 
-console.log('🚀 A/L & O/L Exam Countdown - YOUR JSONBIN VERSION');
+console.log('🚀 A/L & O/L Exam Countdown - UPDATED JSONBIN VERSION');
