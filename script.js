@@ -5,7 +5,8 @@ const CONFIG = {
     GIST: {
         ID: '5ba047e2b5c15dee6ade09af9ee5d1e6',
         OWNER: 'sadeepa0813',
-        FILENAME: 'comments.json'
+        FILENAME: 'comments.json',
+        TOKEN: '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' // ඔබේ GitHub Token එක මෙහි දමන්න
     },
     WHATSAPP: {
         BOT: '94705179349',
@@ -15,17 +16,18 @@ const CONFIG = {
         '2025': new Date('2025-11-10T00:00:00'),
         '2026': new Date('2026-08-03T00:00:00'),
         '2027': new Date('2027-08-02T00:00:00'),
-        'ol': new Date('2026-02-17T00:00:00')
+        'ol': new Date('2025-12-01T00:00:00') // O/L දිනය නිවැරදි කලා
     },
     STUDY_STARTS: {
         '2025': new Date('2024-01-01'),
         '2026': new Date('2025-01-01'),
         '2027': new Date('2026-01-01'),
-        'ol': new Date('2023-06-01')
+        'ol': new Date('2024-01-01') // O/L ආරම්භක දිනය නිවැරදි කලා
     }
 };
 
-const GIST_RAW_URL = `https://gist.githubusercontent.com/${CONFIG.GIST.OWNER}/${CONFIG.GIST.ID}/raw/comments.json`;
+const GIST_API_URL = `https://api.github.com/gists/${CONFIG.GIST.ID}`;
+const GIST_RAW_URL = `https://gist.githubusercontent.com/${CONFIG.GIST.OWNER}/${CONFIG.GIST.ID}/raw/${CONFIG.GIST.FILENAME}`;
 
 // Global Variables
 let currentBatch = '2026';
@@ -507,11 +509,25 @@ function openWhatsApp(number, message) {
     window.open(webLink, '_blank');
 }
 
-const waEl = document.getElementById('waChat');
-if (waEl) waEl.addEventListener('click', () => {
-    const message = `Hi 👋\n🤖 A/L Exam Countdown Bot වලට ඔබව සාදරයෙන් පිළිගනිමු!\n🎯 A/L Exam countdown updates!\n⏰ Daily countdown updates\n💡 Motivational quotes\n📊 Study progress tracking\n🏆 Achievement system\n📚 Support for 2025, 2026 & 2027 batches\nකරුණාකර "activate" බටන් එක දබන්න.\n> sadeepa and shamika`;
-    openWhatsApp(CONFIG.WHATSAPP.BOT, message);
-});
+// WhatsApp බොත්තම සක්‍රීය කිරීම
+function enableWhatsAppButton() {
+    const waBtn = document.getElementById('waChat');
+    if (waBtn) {
+        waBtn.classList.remove('disabled');
+        const btnText = waBtn.querySelector('.btn-text');
+        if (btnText) {
+            btnText.textContent = '💬 WhatsApp Bot සම්බන්ධ වන්න';
+        }
+        waBtn.style.opacity = '1';
+        waBtn.style.cursor = 'pointer';
+        
+        // Event listener එකතු කිරීම
+        waBtn.addEventListener('click', function() {
+            const message = `Hi 👋\nA/L Exam Countdown Bot වලට ඔබව සාදරයෙන් පිළිගනිමු!\nකරුණාකර "activate" බටන් එක දබන්න.`;
+            openWhatsApp(CONFIG.WHATSAPP.BOT, message);
+        });
+    }
+}
 
 function openComplaintWhatsApp() {
     const message = `📝 Subject/Time Complaint Report 📝\n🎯 A/L 2026 Exam Timetable Complaint\n\nකරුණාකර complaint එක දාන්න:\n❗ Missing Subject\n⏰ Wrong Time\n📅 Wrong Date\n🔄 Other Issues\n\n- Team Sadeepa & Shamika`;
@@ -550,45 +566,102 @@ function viewUpdateDetails() {
     );
 }
 
-// Comments System
-async function loadComments() {
+// Comments System - Enhanced Version
+async function updateGistWithComment(newComment) {
+    try {
+        // පවතින comments ලබා ගන්න
+        const response = await fetch(GIST_API_URL);
+        if (!response.ok) throw new Error('Failed to fetch gist');
+        
+        const gistData = await response.json();
+        const currentContent = gistData.files[CONFIG.GIST.FILENAME].content;
+        let currentComments = [];
+        
+        try {
+            currentComments = JSON.parse(currentContent).comments || [];
+        } catch (e) {
+            currentComments = [];
+        }
+        
+        // නව comment එකතු කරන්න
+        currentComments.unshift(newComment);
+        
+        // Gist අප්ඩේට් කරන්න
+        const updateResponse = await fetch(GIST_API_URL, {
+            method: 'PATCH',
+            headers: {
+                'Authorization': `token ${CONFIG.GIST.TOKEN}`,
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+                files: {
+                    [CONFIG.GIST.FILENAME]: {
+                        content: JSON.stringify({
+                            comments: currentComments
+                        }, null, 2)
+                    }
+                }
+            })
+        });
+        
+        if (!updateResponse.ok) throw new Error('Failed to update gist');
+        
+        return true;
+    } catch (error) {
+        console.error('Gist update error:', error);
+        return false;
+    }
+}
+
+async function loadCommentsFromGist() {
     try {
         const response = await fetch(GIST_RAW_URL + '?t=' + Date.now());
         if (!response.ok) throw new Error('Failed to fetch comments');
+        
         const data = await response.json();
         comments = data.comments || [];
+        
+        // localStorage එකට backup කරන්න
+        localStorage.setItem('exam_countdown_comments', JSON.stringify(comments));
+        
         renderComments();
         updateCommentsCount();
-        // Save to localStorage as backup
-        localStorage.setItem('exam_countdown_comments', JSON.stringify(comments));
+        return true;
     } catch (error) {
-        console.error('Error loading comments:', error);
-        // Use fallback comments from localStorage or default
+        console.error('Error loading comments from gist:', error);
+        return false;
+    }
+}
+
+async function loadComments() {
+    try {
+        // පළමුව localStorage වලින් පෙන්වන්න (වේගවත් ප්‍රතිචාරය සඳහා)
+        const storedComments = localStorage.getItem('exam_countdown_comments');
+        if (storedComments) {
+            comments = JSON.parse(storedComments);
+            renderComments();
+            updateCommentsCount();
+        }
+        
+        // පසුව Gist වලින් නවතම comments ලබා ගන්න
+        await loadCommentsFromGist();
+        
+    } catch (error) {
+        console.error('Load comments error:', error);
         useFallbackComments();
     }
 }
 
 function useFallbackComments() {
-    const stored = localStorage.getItem('exam_countdown_comments');
-    if (stored) {
-        comments = JSON.parse(stored);
-    } else {
-        comments = [
-            {
-                id: 1,
-                author: "සදීප",
-                content: "මේ වෙබ් එක ගොඩක් වටිනවා! A/L විභාගයට සූදානම් වෙන ළමයින්ට උදව්වක් වෙනවා.",
-                timestamp: new Date().toISOString(),
-                likes: 5
-            },
-            {
-                id: 2,
-                author: "ශාමික",
-                content: "මම 2026 A/L ළමයෙක්. මේ කවුන්ට් ඩවුන් එක මට ගොඩක් ප්‍රයෝජනවත් වෙනවා. තෑන්ක්ස්!",
-                timestamp: new Date().toISOString(),
-                likes: 8
-            }
-        ];
+    try {
+        const stored = localStorage.getItem('exam_countdown_comments');
+        if (stored) {
+            comments = JSON.parse(stored);
+        } else {
+            comments = [];
+        }
+    } catch (error) {
+        comments = [];
     }
     renderComments();
     updateCommentsCount();
@@ -658,7 +731,7 @@ function toggleLike(commentId) {
     localStorage.setItem('exam_countdown_comments', JSON.stringify(comments));
 }
 
-function submitComment() {
+async function submitComment() {
     const input = document.getElementById('commentInput');
     const submitBtn = document.getElementById('commentSubmit');
 
@@ -675,7 +748,7 @@ function submitComment() {
         return;
     }
 
-    // Disable submit button
+    // Submit button disable කරන්න
     submitBtn.disabled = true;
     submitBtn.innerHTML = '<span class="loading-spinner"></span> යොමු කරමින්...';
 
@@ -687,26 +760,49 @@ function submitComment() {
         likes: 0
     };
 
-    // Add comment locally first
-    comments.unshift(newComment);
-    renderComments();
-    updateCommentsCount();
-
-    // Clear input
-    input.value = '';
-    updateCharCount();
-
-    // Save to localStorage
-    localStorage.setItem('exam_countdown_comments', JSON.stringify(comments));
-
-    // Re-enable submit button
-    submitBtn.disabled = false;
-    submitBtn.textContent = 'අදහස් යොමු කරන්න';
-
-    showNotification('✅', 'අදහස සාර්ථකයි!');
-
-    // Note: In a real implementation, you would save to the Gist here
-    // For now, comments are only stored locally
+    try {
+        // Gist එකට comment එකතු කිරීමට උත්සාහ කරන්න
+        let success = false;
+        if (CONFIG.GIST.TOKEN && CONFIG.GIST.TOKEN !== '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') {
+            success = await updateGistWithComment(newComment);
+        }
+        
+        if (success) {
+            // සාර්ථකයි නම් local comments අප්ඩේට් කරන්න
+            comments.unshift(newComment);
+            localStorage.setItem('exam_countdown_comments', JSON.stringify(comments));
+            
+            renderComments();
+            updateCommentsCount();
+            input.value = '';
+            updateCharCount();
+            
+            showNotification('✅', 'අදහස සාර්ථකව යොමු කළා! (Public)');
+        } else {
+            // Gist fail වුනොත් local storage එකට save කරන්න
+            comments.unshift(newComment);
+            localStorage.setItem('exam_countdown_comments', JSON.stringify(comments));
+            
+            renderComments();
+            updateCommentsCount();
+            input.value = '';
+            updateCharCount();
+            
+            showNotification('✅', 'අදහස සුරකින ලදී! (Local)');
+            
+            // Token නැති බව දැනුම් දෙන්න
+            if (!CONFIG.GIST.TOKEN || CONFIG.GIST.TOKEN === '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') {
+                console.log('GitHub Token not configured. Comments are saved locally only.');
+            }
+        }
+    } catch (error) {
+        console.error('Submit comment error:', error);
+        showAlert('❌', 'දෝෂයක්', 'අදහස යොමු කිරීමට නොහැකි විය.');
+    } finally {
+        // Submit button යථා තත්වයට පත් කරන්න
+        submitBtn.disabled = false;
+        submitBtn.textContent = 'අදහස් යොමු කරන්න';
+    }
 }
 
 function updateCharCount() {
@@ -786,6 +882,29 @@ if (notificationClose) {
     });
 }
 
+// Scroll to top button
+function scrollToTop() {
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+
+function createScrollToTopButton() {
+    const scrollBtn = document.createElement('button');
+    scrollBtn.className = 'scroll-to-top';
+    scrollBtn.innerHTML = '⬆';
+    scrollBtn.onclick = scrollToTop;
+    scrollBtn.style.display = 'none';
+    document.body.appendChild(scrollBtn);
+    
+    // පිටුව පොරවන විට පෙන්වන්න/සඟවන්න
+    window.addEventListener('scroll', function() {
+        if (window.pageYOffset > 300) {
+            scrollBtn.style.display = 'flex';
+        } else {
+            scrollBtn.style.display = 'none';
+        }
+    });
+}
+
 // Initialize App
 function initializeApp() {
     // Detect default batch
@@ -801,6 +920,12 @@ function initializeApp() {
     getDailyQuote();
     updateCountdown();
     updateCurrentTime();
+
+    // Create scroll to top button
+    createScrollToTopButton();
+    
+    // Enable WhatsApp button
+    enableWhatsAppButton();
 
     // Show update notification
     setTimeout(showUpdateNotification, 2000);
