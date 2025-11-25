@@ -1,135 +1,728 @@
-<!doctype html>
-
-<html lang="si">
+<!DOCTYPE html>
+<html lang="en">
 <head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>Source Preview — මෙයම source බලන්න</title>
-  <style>
-    :root{--bg:#0f1724;--card:#0b1220;--muted:#9aa4b2;--accent:#7dd3fc}
-    html,body{height:100%;margin:0;font-family:Inter,ui-sans-serif,system-ui,Segoe UI,Roboto,'Noto Sans',Arial}
-    body{background:linear-gradient(180deg,#071126 0%, #071830 100%);color:#e6eef6;display:flex;align-items:center;justify-content:center;padding:24px}
-    .wrap{width:100%;max-width:980px;background:var(--card);border-radius:14px;box-shadow:0 10px 30px rgba(2,6,23,.6);overflow:hidden}
-    header{display:flex;gap:12px;align-items:center;padding:18px 20px;border-bottom:1px solid rgba(255,255,255,.03)}
-    h1{font-size:18px;margin:0;color:#fff}
-    p.lead{margin:0;color:var(--muted);font-size:13px}
-    .controls{display:flex;gap:10px;margin-left:auto}
-    button{background:transparent;border:1px solid rgba(255,255,255,.06);padding:8px 12px;border-radius:10px;color:var(--muted);cursor:pointer;font-weight:600}
-    button.primary{background:linear-gradient(90deg,#0369a1,#0891b2);border:0;color:white}
-    main{display:flex;gap:0}
-    .panel{flex:1;padding:18px}
-    pre{white-space:pre-wrap;word-wrap:break-word;overflow:auto;max-height:60vh;padding:14px;background:#071126;border-radius:10px;border:1px solid rgba(255,255,255,.02);font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:13px;color:#cfeefe}
-    .note{font-size:12px;color:var(--muted);margin-top:8px}
-    .actions{display:flex;gap:8px;margin-top:12px}
-    .small{font-size:12px;padding:6px 10px}
-    footer{padding:12px 18px;border-top:1px solid rgba(255,255,255,.02);font-size:13px;color:var(--muted);display:flex;align-items:center}
-    .hidden{display:none}
-  </style>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>A/L & O/L Exam Countdown</title>
+    <link rel="icon" href="https://i.ibb.co/jZJK1jqK/exam-bot-dp2.png" type="image/png">
+    <link rel="stylesheet" href="style.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;800&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+Sinhala:wght@400;500;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
 </head>
 <body>
-  <div class="wrap" role="main">
-    <header>
-      <div>
-        <h1>වෙබ්පේජ්‌ Source Preview</h1>
-        <p class="lead">මෙම පිටුවේ සම්පූර්ණ source (HTML) පහතින් copy කරන්න, download කරන්න හෝ edit කරන්න.</p>
-      </div>
-      <div class="controls">
-        <button id="btnCopy" class="small">Copy source</button>
-        <button id="btnDownload" class="small">Download .html</button>
-        <button id="btnToggle" class="small">Hide HTML</button>
-      </div>
-    </header><main>
-  <div class="panel">
-    <strong>Source (HTML)</strong>
-    <pre id="sourcePre" aria-label="page source">loading...</pre>
-    <div class="note">මෙහි ඇති කොඩ් එක ඔබට copy කරගෙන වෙනත් වෙබ්‌පිටුවක් හෝ editor එකට paste කරන්න පුළුවන්.</div>
-    <div class="actions">
-      <button id="btnCopy2" class="primary small">Copy</button>
-      <button id="btnDownload2" class="small">Download HTML</button>
+    <!-- Update Notification -->
+    <div id="updateNotification" class="update-notification">
+        <div class="update-notification-content">
+            <div class="update-icon">🎉</div>
+            <div class="update-text">
+                <h3>New Update Available!</h3>
+                <p>We've added new features to improve your experience.</p>
+            </div>
+            <button class="update-close-btn" onclick="closeUpdateNotification()">×</button>
+            <button class="update-action-btn" onclick="viewUpdateDetails()">View Details</button>
+        </div>
     </div>
-  </div>
-</main>
 
-<footer>
-  <div>Tip: ඔබට source preview එකට වෙනස් කිරීමක් කරලා save කරගන්න පුළුවන් — ඒකට copy කර editor තුල paste කරන්න.</div>
-</footer>
+    <!-- Theme Toggle Button -->
+    <div class="theme-toggle" id="themeToggle">
+        <i class="fas fa-moon" id="themeIcon"></i>
+    </div>
+    
+    <!-- Notification Toast -->
+    <div class="notification-toast" id="notificationToast">
+        <span class="notification-icon" id="notificationIcon">✅</span>
+        <span class="notification-message" id="notificationMessage">Notification message</span>
+        <button class="notification-close" id="notificationClose">×</button>
+    </div>
+    
+    <!-- 批次切换侧边弹窗 -->
+    <div class="batch-toast" id="batchToast">
+        <button class="batch-toast-close" onclick="closeBatchToast()">×</button>
+        <div class="batch-toast-header">
+            <div class="batch-toast-icon" id="batchToastIcon">
+                <i class="fas fa-graduation-cap"></i>
+            </div>
+            <h3 class="batch-toast-title" id="batchToastTitle">Batch Changed</h3>
+        </div>
+        <div class="batch-toast-content">
+            <div class="batch-toast-info">
+                <span class="batch-toast-label">Current Batch:</span>
+                <span class="batch-toast-value" id="batchToastCurrent">2026 A/L</span>
+            </div>
+            <div class="batch-toast-info">
+                <span class="batch-toast-label">Exam Date:</span>
+                <span class="batch-toast-value" id="batchToastDate">August 2026</span>
+            </div>
+            <div class="batch-toast-info">
+                <span class="batch-toast-label">Days Remaining:</span>
+                <span class="batch-toast-value" id="batchToastDays">--</span>
+            </div>
+        </div>
+    </div>
 
-  </div>  <script>
-    // Escape HTML for showing in <pre>
-    function escapeHtml(s){
-      return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
-    }
+    <div class="wrap">
+        <div class="card">
+            <header>
+                <div class="logo" id="mainLogo">
+                    <img src="https://i.ibb.co/jZJK1jqK/exam-bot-dp2.png" alt="Exam Icon" style="width: 70%; height: 70%; object-fit: contain;">
+                </div>
+                <h1>A/L & O/L Exam Countdown</h1>
+                <p class="lead">Advanced Level & Ordinary Level Exam Countdown</p>
+            </header>
+            <div class="batch-selector">
+                <button class="batch-btn disabled" data-batch="2025">📚 2025 A/L</button>
+                <button class="batch-btn batch-btn-2026 active" data-batch="2026">🎯 2026 A/L</button>
+                <button class="batch-btn batch-btn-2027" data-batch="2027">🎓 2027 A/L</button>
+                <button class="batch-btn batch-btn-ol" data-batch="ol">📖 2025 O/L</button>
+            </div>
+        </div>
 
-    function setSourceText(text){
-      const pre = document.getElementById('sourcePre');
-      pre.textContent = escapeHtml(text);
-    }
+        <!-- 2025 A/L Section -->
+        <div id="section2025" class="countdown-section hidden">
+            <div class="card">
+                <div class="status-bar">
+                    <div class="countdown-status">
+                        <div class="status-dot"></div>
+                        November 2025 Batch
+                    </div>
+                    <div style="font-size:10px;color:var(--text-secondary);">
+                        <span id="lastUpdate2025">Live</span>   
+                    </div>
+                </div>
+                <div id="countdown2025" class="countdown">
+                    <div class="tile" id="daysTile2025">
+                        <div class="num" id="days2025">--</div>
+                        <div class="lbl">Days</div>
+                    </div>
+                    <div class="tile" id="hoursTile2025">
+                        <div class="num" id="hours2025">--</div>
+                        <div class="lbl">Hours</div>
+                    </div>
+                    <div class="tile" id="minutesTile2025">
+                        <div class="num" id="minutes2025">--</div>
+                        <div class="lbl">Minutes</div>
+                    </div>
+                    <div class="tile" id="secondsTile2025">
+                        <div class="num" id="seconds2025">--</div>
+                        <div class="lbl">Seconds</div>
+                    </div>
+                </div>
+                <div class="quote-section">
+                    <div class="quote-text" id="dailyQuote2025">Loading inspirational quote...</div>
+                    <div class="quote-number" id="quoteNumber2025"></div>
+                </div>
+                <div class="progress-section">
+                    <div class="progress-item">
+                        <div class="progress-info">
+                            <div class="progress-title">Days Passed</div>
+                            <div class="progress-subtitle">Since A/L 2025 preparation</div>
+                        </div>
+                        <div class="progress-value" id="daysPassed2025">0</div>
+                    </div>
+                </div>
+            </div>
+        </div>
 
-    // Grab the full HTML of the page (self-referential)
-    function getFullHtml(){
-      // We want the full outerHTML of the document element
-      return '<!doctype html>\n' + document.documentElement.outerHTML.replace(/^\s+|\s+$/g,'');
-    }
+        <!-- 2026 A/L Section -->
+        <div id="section2026" class="countdown-section">
+            <div class="card card-2026">
+                <div class="status-bar">
+                    <div class="countdown-status countdown-status-2026">
+                        <div class="status-dot status-dot-2026"></div>
+                        August 2026 Batch
+                    </div>
+                    <div style="font-size:10px;color:var(--text-secondary);">
+                        <span id="lastUpdate2026">Live</span>
+                    </div>
+                </div>
+                <div id="countdown2026" class="countdown">
+                    <div class="tile tile-2026" id="daysTile2026">
+                        <div class="num" id="days2026">--</div>
+                        <div class="lbl">Days</div>
+                    </div>
+                    <div class="tile tile-2026" id="hoursTile2026">
+                        <div class="num" id="hours2026">--</div>
+                        <div class="lbl">Hours</div>
+                    </div>
+                    <div class="tile tile-2026" id="minutesTile2026">
+                        <div class="num" id="minutes2026">--</div>
+                        <div class="lbl">Minutes</div>
+                    </div>
+                    <div class="tile tile-2026" id="secondsTile2026">
+                        <div class="num" id="seconds2026">--</div>
+                        <div class="lbl">Seconds</div>
+                    </div>
+                </div>
+                <div class="quote-section quote-section-2026">
+                    <div class="quote-text" id="dailyQuote2026">Loading inspirational quote...</div>
+                    <div class="quote-number quote-number-2026" id="quoteNumber2026"></div>
+                </div>
+                <div class="progress-section">
+                    <div class="progress-item">
+                        <div class="progress-info">
+                            <div class="progress-title">Days Passed</div>
+                            <div class="progress-subtitle">Since A/L 2026 preparation</div>
+                        </div>
+                        <div class="progress-value progress-value-2026" id="daysPassed2026">0</div>
+                    </div>
+                </div>
+            </div>
+        </div>
 
-    // Copy to clipboard helper
-    async function copyToClipboard(text){
-      try{
-        await navigator.clipboard.writeText(text);
-        return true;
-      }catch(e){
-        // fallback
-        const ta = document.createElement('textarea');
-        ta.value = text; document.body.appendChild(ta); ta.select();
-        try{ document.execCommand('copy'); document.body.removeChild(ta); return true;}catch(e2){document.body.removeChild(ta); return false}
-      }
-    }
+        <!-- 2027 A/L Section -->
+        <div id="section2027" class="countdown-section hidden">
+            <div class="card card-2027">
+                <div class="status-bar">
+                    <div class="countdown-status countdown-status-2027">
+                        <div class="status-dot status-dot-2027"></div>
+                        August 2027 Batch
+                    </div>
+                    <div style="font-size:10px;color:var(--text-secondary);">
+                        <span id="lastUpdate2027">Live</span>
+                    </div>
+                </div>
+                <div id="countdown2027" class="countdown">
+                    <div class="tile tile-2027" id="daysTile2027">
+                        <div class="num" id="days2027">--</div>
+                        <div class="lbl">Days</div>
+                    </div>
+                    <div class="tile tile-2027" id="hoursTile2027">
+                        <div class="num" id="hours2027">--</div>
+                        <div class="lbl">Hours</div>
+                    </div>
+                    <div class="tile tile-2027" id="minutesTile2027">
+                        <div class="num" id="minutes2027">--</div>
+                        <div class="lbl">Minutes</div>
+                    </div>
+                    <div class="tile tile-2027" id="secondsTile2027">
+                        <div class="num" id="seconds2027">--</div>
+                        <div class="lbl">Seconds</div>
+                    </div>
+                </div>
+                <div class="quote-section quote-section-2027">
+                    <div class="quote-text" id="dailyQuote2027">Loading inspirational quote...</div>
+                    <div class="quote-number quote-number-2027" id="quoteNumber2027"></div>
+                </div>
+                <div class="progress-section">
+                    <div class="progress-item">
+                        <div class="progress-info">
+                            <div class="progress-title">Days Passed</div>
+                            <div class="progress-subtitle">Since A/L 2027 preparation</div>
+                        </div>
+                        <div class="progress-value progress-value-2027" id="daysPassed2027">0</div>
+                    </div>
+                </div>
+            </div>
+        </div>
 
-    // Download helper
-    function downloadFile(filename, text){
-      const blob = new Blob([text], {type:'text/html'});
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url; a.download = filename; document.body.appendChild(a); a.click();
-      setTimeout(()=>{ URL.revokeObjectURL(url); a.remove(); }, 500);
-    }
+        <!-- O/L Section -->
+        <div id="sectionOL" class="countdown-section hidden">
+            <div class="card card-ol">
+                <div class="status-bar">
+                    <div class="countdown-status countdown-status-ol">
+                        <div class="status-dot status-dot-ol"></div>
+                        December 2025 O/L Batch
+                    </div>
+                    <div style="font-size:10px;color:var(--text-secondary);">
+                        <span id="lastUpdateOL">Live</span>
+                    </div>
+                </div>
+                <div id="countdownOL" class="countdown">
+                    <div class="tile tile-ol" id="daysTileOL">
+                        <div class="num" id="daysOL">--</div>
+                        <div class="lbl">Days</div>
+                    </div>
+                    <div class="tile tile-ol" id="hoursTileOL">
+                        <div class="num" id="hoursOL">--</div>
+                        <div class="lbl">Hours</div>
+                    </div>
+                    <div class="tile tile-ol" id="minutesTileOL">
+                        <div class="num" id="minutesOL">--</div>
+                        <div class="lbl">Minutes</div>
+                    </div>
+                    <div class="tile tile-ol" id="secondsTileOL">
+                        <div class="num" id="secondsOL">--</div>
+                        <div class="lbl">Seconds</div>
+                    </div>
+                </div>
+                <div class="quote-section quote-section-ol">
+                    <div class="quote-text" id="dailyQuoteOL">Loading inspirational quote...</div>
+                    <div class="quote-number quote-number-ol" id="quoteNumberOL"></div>
+                </div>
+                <div class="progress-section">
+                    <div class="progress-item">
+                        <div class="progress-info">
+                            <div class="progress-title">Days Passed</div>
+                            <div class="progress-subtitle">Since O/L 2025 preparation</div>
+                        </div>
+                        <div class="progress-value progress-value-ol" id="daysPassedOL">0</div>
+                    </div>
+                </div>
+                
+                <!-- O/L Timetable Section -->
+                <div class="ol-timetable-section">
+                    <div class="ol-timetable-header">
+                        <h3 class="ol-timetable-title">2025 O/L Exam Timetable</h3>
+                        <p class="ol-timetable-subtitle">Select your subjects to view your personalized exam schedule</p>
+                    </div>
+                    
+                    <div class="timetable-notice">
+                        <div class="timetable-notice-icon">📅</div>
+                        <h3 class="timetable-notice-title">O/L 2025 Timetable Not Available</h3>
+                        <p class="timetable-notice-text">The official O/L 2025 examination timetable is not available.</p>
+                        <p class="timetable-notice-subtext">Select your subjects below to view your personalized exam schedule.</p>
+                    </div>
+                    
+                    <div class="subjects-grid">
+                        <div class="subject-category">
+                            <h4 class="category-title">Core Subjects</h4>
+                            <div class="subjects-list">
+                                <label class="subject-checkbox">
+                                    <input type="checkbox" value="sinhala-ol" data-name="Sinhala">
+                                    <span class="checkmark"></span>
+                                    <span>sinhala</span>
+                                </label>
+                                <label class="subject-checkbox">
+                                    <input type="checkbox" value="mathematics-ol" data-name="Mathematics">
+                                    <span class="checkmark"></span>
+                                    <span>Mathematics</span>
+                                </label>
+                                <label class="subject-checkbox">
+                                    <input type="checkbox" value="science-ol" data-name="Science">
+                                    <span class="checkmark"></span>
+                                    <span>Science</span>
+                                </label>
+                                <label class="subject-checkbox">
+                                    <input type="checkbox" value="history-ol" data-name="History">
+                                    <span class="checkmark"></span>
+                                    <span>History</span>
+                                </label>
+                                <label class="subject-checkbox">
+                                    <input type="checkbox" value="religion-ol" data-name="Religion">
+                                    <span class="checkmark"></span>
+                                    <span>Religion</span>
+                                </label>
+                            </div>
+                        </div>
+                        
+                        <div class="subject-category">
+                            <h4 class="category-title">Optional Subjects</h4>
+                            <div class="subjects-list">
+                                <label class="subject-checkbox">
+                                    <input type="checkbox" value="english-ol" data-name="English">
+                                    <span class="checkmark"></span>
+                                    <span>English</span>
+                                </label>
+                                <label class="subject-checkbox">
+                                    <input type="checkbox" value="commerce-ol" data-name="Commerce">
+                                    <span class="checkmark"></span>
+                                    <span>Commerce</span>
+                                </label>
+                                <label class="subject-checkbox">
+                                    <input type="checkbox" value="art-ol" data-name="Art">
+                                    <span class="checkmark"></span>
+                                    <span>Art</span>
+                                </label>
+                                <label class="subject-checkbox">
+                                    <input type="checkbox" value="music-ol" data-name="Music">
+                                    <span class="checkmark"></span>
+                                    <span>Music</span>
+                                </label>
+                                <label class="subject-checkbox">
+                                    <input type="checkbox" value="dancing-ol" data-name="Dancing">
+                                    <span class="checkmark"></span>
+                                    <span>Dancing</span>
+                                </label>
+                                <label class="subject-checkbox">
+                                    <input type="checkbox" value="drama-ol" data-name="Drama">
+                                    <span class="checkmark"></span>
+                                    <span>Drama</span>
+                                </label>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="selected-count" id="selectedCountOL">0 subjects selected</div>
+                    <div class="selection-actions">
+                        <button class="submit-btn disabled" id="showExamDatesBtnOL" onclick="showMyExamDatesOL()">Show My Exam Dates</button>
+                        <button class="clear-btn" onclick="clearSelectionOL()">Clear All</button>
+                    </div>
+                </div>
+            </div>
+        </div>
 
-    // Initialize
-    (function(){
-      const html = getFullHtml();
-      setSourceText(html);
+        <!-- Subject Selection Card -->
+        <div id="subjectSelectionCard" class="card">
+            <div style="text-align: center; margin-bottom: 16px;">
+                <h3 style="font-size: 18px; color: var(--accent2026); margin: 0 0 10px;">A/L 2026 Subject Selection</h3>
+                <p style="font-size: 12px; color: var(--text-secondary); margin: 0;">කාල සටහනට ඔනි විශයන් ටික දලා සිලෙක්ට් කරගන්න</p>
+            </div>
+            <div class="timetable-notice">
+                <div class="timetable-notice-icon">📅</div>
+                <h3 class="timetable-notice-title">A/L 2026 Timetable Not Released Yet</h3>
+                <p class="timetable-notice-text">The official A/L 2026 examination timetable has not been released by the Department of Examinations yet.</p>
+                <p class="timetable-notice-subtext">We will update the timetable as soon as it's officially released. Please check back later.</p>
+            </div>
+            <div class="subjects-grid">
+                <div class="subject-category">
+                    <h4 class="category-title">Mathematics</h4>
+                    <div class="subjects-list">
+                        <label class="subject-checkbox">
+                            <input type="checkbox" value="combined-math-1,combined-math-2" data-name="Combined Mathematics">
+                            <span class="checkmark"></span>
+                            <span>Combined Mathematics</span>
+                        </label>
+                        <label class="subject-checkbox">
+                            <input type="checkbox" value="higher-mathematics-1,higher-mathematics-2" data-name="Higher Mathematics">
+                            <span class="checkmark"></span>
+                            <span>Higher Mathematics</span>
+                        </label>
+                        <label class="subject-checkbox">
+                            <input type="checkbox" value="chemistry-1,chemistry-2" data-name="Chemistry">
+                            <span class="checkmark"></span>
+                            <span>Chemistry</span>
+                        </label>
+                        <label class="subject-checkbox">
+                            <input type="checkbox" value="ict-1,ict-2" data-name="ICT">
+                            <span class="checkmark"></span>
+                            <span>ICT</span>
+                        </label>
+                        <label class="subject-checkbox">
+                            <input type="checkbox" value="physics-1,physics-2" data-name="Physics">
+                            <span class="checkmark"></span>
+                            <span>Physics</span>
+                        </label>
+                    </div>
+                </div>
+                <div class="subject-category">
+                    <h4 class="category-title">Science</h4>
+                    <div class="subjects-list">
+                        <label class="subject-checkbox">
+                            <input type="checkbox" value="biology-1,biology-2" data-name="Biology">
+                            <span class="checkmark"></span>
+                            <span>Biology</span>
+                        </label>
+                        <label class="subject-checkbox">
+                            <input type="checkbox" value="chemistry-1,chemistry-2" data-name="Chemistry">
+                            <span class="checkmark"></span>
+                            <span>Chemistry</span>
+                        </label>
+                        <label class="subject-checkbox">
+                            <input type="checkbox" value="physics-1,physics-2" data-name="Physics">
+                            <span class="checkmark"></span>
+                            <span>Physics</span>
+                        </label>
+                        <label class="subject-checkbox">
+                            <input type="checkbox" value="agricultural-science-1,agricultural-science-2" data-name="Agricultural Science">
+                            <span class="checkmark"></span>
+                            <span>Agricultural Science</span>
+                        </label>
+                    </div>
+                </div>
+                <div class="subject-category">
+                    <h4 class="category-title">Arts</h4>
+                    <div class="subjects-list">
+                        <label class="subject-checkbox">
+                            <input type="checkbox" value="media-studies-1,media-studies-2" data-name="Media Studies">
+                            <span class="checkmark"></span>
+                            <span>Media Studies</span>
+                        </label>
+                        <label class="subject-checkbox">
+                            <input type="checkbox" value="sinhala-1,sinhala-2" data-name="Sinhala">
+                            <span class="checkmark"></span>
+                            <span>Sinhala</span>
+                        </label>
+                        <label class="subject-checkbox">
+                            <input type="checkbox" value="history-sri-lanka" data-name="History of Sri Lanka">
+                            <span class="checkmark"></span>
+                            <span>History of Sri Lanka</span>
+                        </label>
+                        <label class="subject-checkbox">
+                            <input type="checkbox" value="buddhism-1,buddhism-2" data-name="Buddhism">
+                            <span class="checkmark"></span>
+                            <span>Buddhism</span>
+                        </label>
+                        <label class="subject-checkbox">
+                            <input type="checkbox" value="geography-1,geography-2" data-name="Geography">
+                            <span class="checkmark"></span>
+                            <span>Geography</span>
+                        </label>
+                        <label class="subject-checkbox">
+                            <input type="checkbox" value="political-science-1,political-science-2" data-name="Political Science">
+                            <span class="checkmark"></span>
+                            <span>Political Science</span>
+                        </label>
+                        <label class="subject-checkbox">
+                            <input type="checkbox" value="home-economics-1,home-economics-2" data-name="Home Economics">
+                            <span class="checkmark"></span>
+                            <span>Home Economics</span>
+                        </label>
+                        <label class="subject-checkbox">
+                            <input type="checkbox" value="logic-1,logic-2" data-name="Logic">
+                            <span class="checkmark"></span>
+                            <span>Logic</span>
+                        </label>
+                        <label class="subject-checkbox">
+                            <input type="checkbox" value="k-1,k-2" data-name="Korean">
+                            <span class="checkmark"></span>
+                            <span>Korean</span>
+                        </label>
+                        <label class="subject-checkbox">
+                            <input type="checkbox" value="j-1,j-2" data-name="Japanese">
+                            <span class="checkmark"></span>
+                            <span>Japanese</span>
+                        </label>
+                        <label class="subject-checkbox">
+                            <input type="checkbox" value="el-1,el-2" data-name="English Literature">
+                            <span class="checkmark"></span>
+                            <span>English Literature</span>
+                        </label>
+                        <label class="subject-checkbox">
+                            <input type="checkbox" value="f-1,f-2" data-name="French">
+                            <span class="checkmark"></span>
+                            <span>French</span>
+                        </label>
+                        <label class="subject-checkbox">
+                            <input type="checkbox" value="art-1,art-2" data-name="Art">
+                            <span class="checkmark"></span>
+                            <span>Art</span>
+                        </label>
+                    </div>
+                </div>
+                <div class="subject-category">
+                    <h4 class="category-title">Commerce</h4>
+                    <div class="subjects-list">
+                        <label class="subject-checkbox">
+                            <input type="checkbox" value="business-studies-1,business-studies-2" data-name="Business Studies">
+                            <span class="checkmark"></span>
+                            <span>Business Studies</span>
+                        </label>
+                        <label class="subject-checkbox">
+                            <input type="checkbox" value="economics-1,economics-2" data-name="Economics">
+                            <span class="checkmark"></span>
+                            <span>Economics</span>
+                        </label>
+                        <label class="subject-checkbox">
+                            <input type="checkbox" value="accounting-1,accounting-2" data-name="Accounting">
+                            <span class="checkmark"></span>
+                            <span>Accounting</span>
+                        </label>
+                        <label class="subject-checkbox">
+                            <input type="checkbox" value="ict-1,ict-2" data-name="ICT">
+                            <span class="checkmark"></span>
+                            <span>ICT</span>
+                        </label>
+                    </div>
+                </div>
+                <div class="subject-category">
+                    <h4 class="category-title">Technology</h4>
+                    <div class="subjects-list">
+                        <label class="subject-checkbox">
+                            <input type="checkbox" value="ict-1,ict-2" data-name="ICT">
+                            <span class="checkmark"></span>
+                            <span>ICT</span>
+                        </label>
+                        <label class="subject-checkbox">
+                            <input type="checkbox" value="engineering-tech-1,engineering-tech-2" data-name="Engineering Technology">
+                            <span class="checkmark"></span>
+                            <span>Engineering Technology</span>
+                        </label>
+                        <label class="subject-checkbox">
+                            <input type="checkbox" value="bio-systems-tech-1,bio-systems-tech-2" data-name="Bio Systems Technology">
+                            <span class="checkmark"></span>
+                            <span>Bio Systems Technology</span>
+                        </label>
+                        <label class="subject-checkbox">
+                            <input type="checkbox" value="science-for-tech-1,science-for-tech-2" data-name="Science for Technology">
+                            <span class="checkmark"></span>
+                            <span>Science for Technology</span>
+                        </label>
+                    </div>
+                </div>
+                <div class="subject-category">
+                    <h4 class="category-title">Common subject</h4>
+                    <div class="subjects-list">
+                        <label class="subject-checkbox">
+                            <input type="checkbox" value="general-english-1,general-english-2" data-name="General English">
+                            <span class="checkmark"></span>
+                            <span>General English</span>
+                        </label>
+                        <label class="subject-checkbox">
+                            <input type="checkbox" value="common-general-test" data-name="Common General Test">
+                            <span class="checkmark"></span>
+                            <span>Common General Test</span>
+                        </label>
+                        <label class="subject-checkbox">
+                            <input type="checkbox" value="m-1,m-2" data-name="Maths">
+                            <span class="checkmark"></span>
+                            <span>Maths</span>
+                        </label>
+                    </div>
+                </div>
+                <div class="subject-category">
+                    <h4 class="category-title">🧪 Practical Exams</h4>
+                    <div class="subjects-list">
+                        <label class="subject-checkbox">
+                            <input type="checkbox" value="bst" data-name="Bio Systems Technology Practical">
+                            <span class="checkmark"></span>
+                            <span>Bio Systems Technology Practical</span>
+                        </label>
+                        <label class="subject-checkbox">
+                            <input type="checkbox" value="et" data-name="Engineering Technology Practical">
+                            <span class="checkmark"></span>
+                            <span>Engineering Technology Practical</span>
+                        </label>
+                        <label class="subject-checkbox">
+                            <input type="checkbox" value="home-economics-practical" data-name="Home Economics Practical">
+                            <span class="checkmark"></span>
+                            <span>Home Economics Practical</span>
+                        </label>
+                    </div>
+                </div>
+            </div>
+            <div class="selected-count" id="selectedCount">0 subjects selected</div>
+            <div class="selection-actions">
+                <button class="submit-btn disabled" id="showExamDatesBtn" onclick="showMyExamDates()">Show My Exam Dates</button>
+                <button class="clear-btn" onclick="clearSelection()">Clear All</button>
+            </div>
+            <div class="complaint-section">
+                <button class="complaint-btn" onclick="openComplaintWhatsApp()">📝 Report Complaint</button>
+                <p class="complaint-text">ඔයාගේ විශයක් නැතිනම් හෝ වේලාව වෙනස් නම් හෝ කම්ප්ලේන් එකක් දාන්න<br>
+                අලුත් වෙන්න ඔනි දෙවල් ඔනිම දෙයක් කියන්න </p>
+                <a href="https://doenets.lk/" target="_blank" class="website-link">Visit Official Website</a>
+            </div>
+        </div>
+        
+        <!-- 评论部分 -->
+        <div class="comments-section">
+            <div class="comments-header">
+                <h3 class="comments-title">
+                    <i class="fas fa-comments"></i>
+                    වෙබ් අදහස්
+                </h3>
+                <span class="comments-count" id="commentsCount">0 අදහස්</span>
+            </div>
+            
+            <div class="comment-form">
+                <textarea 
+                    class="comment-input" 
+                    id="commentInput" 
+                    placeholder="මෙම වෙබ් අඩවිය ගැන ඔබගේ අදහස් මෙතැනින් ලියන්න..."
+                    maxlength="500"
+                ></textarea>
+                <div class="comment-actions">
+                    <div class="comment-char-count">
+                        <span id="charCount">0</span> / 500
+                    </div>
+                    <button class="comment-submit" id="commentSubmit" onclick="submitComment()">
+                        අදහස් යොමු කරන්න
+                    </button>
+                </div>
+            </div>
+            
+            <div class="comments-list" id="commentsList">
+                <div class="empty-comments">
+                    තවම කිසිම අදහසක් නැත. පළමු අදහස ලියන්න!
+                </div>
+            </div>
+        </div>
+        
+        <div class="card whatsapp-section">
+            <div class="wa-buttons">
+                <button id="waChat" class="wa-btn wa-btn-chat">
+                    <svg class="wa-icon" viewBox="0 0 24 24">
+                        <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.150-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.520.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.520-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.040 1.016-1.040 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.200 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.360.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893A11.821 11.821 0 0020.885 3.488"/>
+                    </svg>
+                    <span class="btn-text">💬 තාවකාලිකව නවතා ඇත </span>
+                </button>
+            </div>
+            <div class="description">
+                <span style="font-weight:bold; color:var(--text-primary);">✨📚 A/L Exam Countdown Bot 📚✨</span><br><br>
+                <span style="font-weight:bold; color:var(--text-primary);">⏳ A/L විභාගයට ඔබට තව දවස් කීයක්ද තිබෙන්නේ කියලා real-time දැන ගන්න පුළුවන් smart bot 💡</span><br><br>
+                🚀 <span style="font-weight:bold; color:var(--text-primary);">බොට් ව ස්ටාර්ට් කරන්න:</span> 
+                <span style="font-weight:bold; color:var(--error);">Hi 👋</span><br><br>
+                <ul>
+                    <li><span style="font-weight:bold; color:var(--text-primary);">✅ Daily countdown reminders + motivational quotes 🔔</span></li>
+                    <li><span style="font-weight:bold; color:var(--text-primary);">📊 Study progress tracking & achievements</span></li>
+                    <li><span style="font-weight:bold; color:var(--text-primary);">🔒 Safe & instant – A/L target එක keep track කරන්න easy way!</span></li>
+                </ul>
+                <br>
+               <h3></h3> 🎯 <strong> හැමදාම උදේට මැසෙජ් එකක් ගන්න පුලුවන් </strong> 🟢<br><h3></h3>
+            </div>
+        </div>
+        <div id="examDatesPopup" class="popup-overlay">
+            <div class="popup-modal">
+                <div class="popup-header">
+                    <h3 class="popup-title">My Exam Schedule</h3>
+                    <button class="close-popup" onclick="closeExamDatesPopup()">×</button>
+                </div>
+                <div class="popup-content">
+                    <div id="examDatesList"></div>
+                </div>
+                <div class="popup-footer">
+                    <button class="popup-btn" onclick="copyMySchedule()">Copy Schedule</button>
+                    <button class="popup-btn download-btn" onclick="downloadScheduleImage()">📷 Download Image</button>
+                    <button class="popup-btn close-btn" onclick="closeExamDatesPopup()">Close</button>
+                </div>
+            </div>
+        </div>
+        <div id="alertPopup" class="alert-overlay">
+            <div class="alert-modal">
+                <div class="alert-icon" id="alertIcon">⏰</div>
+                <h3 class="alert-title" id="alertTitle">Message</h3>
+                <p class="alert-message" id="alertMessage">This is a message</p>
+                <div class="alert-actions">
+                    <button class="alert-btn primary" onclick="closeAlert()">OK</button>
+                </div>
+            </div>
+        </div>
+        <div class="footer">
+            <div class="footer-text">
+                Powered by <span class="footer-brand">Sadeepa & Shamika</span> • 
+                <span id="currentTime"></span>
+            </div>
+        </div>
+    </div>
 
-      const btnCopy = document.getElementById('btnCopy');
-      const btnCopy2 = document.getElementById('btnCopy2');
-      const btnDownload = document.getElementById('btnDownload');
-      const btnDownload2 = document.getElementById('btnDownload2');
-      const btnToggle = document.getElementById('btnToggle');
-      const pre = document.getElementById('sourcePre');
+    <button id="contactBtn" class="floating-contact-btn">📧</button>
+    <button class="floating-comment-btn" onclick="scrollToComments()">
+        <i class="fas fa-comment"></i>
+    </button>
 
-      async function doCopy(){
-        const ok = await copyToClipboard(html);
-        if(ok){
-          btnCopy.textContent = 'Copied ✓'; btnCopy2.textContent = 'Copied ✓';
-          setTimeout(()=>{btnCopy.textContent='Copy source';btnCopy2.textContent='Copy'},1200);
-        }else{
-          btnCopy.textContent = 'Copy failed';
-        }
-      }
+    <div id="contactPopup" class="popup-overlay">
+        <div class="contact-modal">
+            <button class="close-popup" onclick="closeContactPopup()">×</button>
+            <div class="contact-header">
+                <div class="logo">📧</div>
+                <h2>Get In Touch</h2>
+                <p>We'd love to hear from you</p>
+            </div>
+            <form id="contactForm">
+                <input type="hidden" name="access_key" value="fd9a9424-521d-4b92-951d-bd41f19f7898">
+                <div class="form-group">
+                    <label for="name">Full Name *</label>
+                    <input type="text" id="name" name="name" required placeholder="sadeepa">
+                </div>
+                <div class="form-group">
+                    <label for="email">Email Address *</label>
+                    <input type="email" id="email" name="email" required placeholder="sadeepa@example.com">
+                </div>
+                <div class="form-group">
+                    <label for="subject">Subject *</label>
+                    <input type="text" id="subject" name="subject" required placeholder="How can we help?">
+                </div>
+                <div class="form-group">
+                    <label for="message">Message *</label>
+                    <textarea id="message" name="message" required placeholder="Tell us more..."></textarea>
+                </div>
+                <button type="submit" class="submit-btn" id="submitBtn">Send Message</button>
+            </form>
+            <div id="statusMessage" class="status-message"></div>
+        </div>
+    </div>
 
-      btnCopy.addEventListener('click', doCopy);
-      btnCopy2.addEventListener('click', doCopy);
-
-      btnDownload.addEventListener('click', ()=> downloadFile('page-source.html', html));
-      btnDownload2.addEventListener('click', ()=> downloadFile('page-source.html', html));
-
-      let visible = true;
-      btnToggle.addEventListener('click', ()=>{
-        visible = !visible;
-        pre.style.display = visible ? 'block' : 'none';
-        btnToggle.textContent = visible ? 'Hide HTML' : 'Show HTML';
-      });
-
-      // If someone views this page via other host or server, still show HTML.
-      // If the HTML is large, keep pre scrollable.
-    })();
-  </script></body>
+    <script src="script.js"></script>
+</body>
 </html>
