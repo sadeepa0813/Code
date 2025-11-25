@@ -34,6 +34,8 @@ let currentBatch = '2026';
 let comments = [];
 let likedComments = new Set();
 let currentUser = '';
+let replyingTo = null;
+let editingComment = null;
 
 // Theme Toggle
 const themeToggle = document.getElementById('themeToggle');
@@ -474,7 +476,7 @@ async function downloadScheduleImage() {
 // Popup close handlers
 function closeExamDatesPopup() {
     const popup = document.getElementById('examDatesPopup');
-    if (popup) popup.classList.remove('show');
+    if (!popup) popup.classList.remove('show');
 }
 
 document.addEventListener('click', function(e) {
@@ -580,12 +582,11 @@ function changeUserName() {
     }
 }
 
-// Enhanced Backend Functions with NEW API KEYS
+// Enhanced Backend Functions with Edit/Delete Support
 async function updateBackendWithComment(newComment) {
     try {
         console.log('🔄 Updating backend with new comment...');
         
-        // Get existing data first
         const getResponse = await fetch(BACKEND_GET_URL, {
             headers: {
                 'X-Master-Key': CONFIG.BACKEND.API_KEY,
@@ -600,15 +601,12 @@ async function updateBackendWithComment(newComment) {
         const existingData = await getResponse.json();
         let currentComments = existingData.comments || [];
         
-        // Add new comment
         currentComments.unshift(newComment);
         
-        // Limit comments to prevent overflow
         if (currentComments.length > 1000) {
             currentComments = currentComments.slice(0, 500);
         }
         
-        // Update backend
         const updateResponse = await fetch(BACKEND_PUT_URL, {
             method: 'PUT',
             headers: {
@@ -655,7 +653,6 @@ async function loadCommentsFromBackend() {
         const data = await response.json();
         comments = data.comments || [];
         
-        // Backup to localStorage
         localStorage.setItem('exam_countdown_comments', JSON.stringify(comments));
         
         renderComments();
@@ -666,7 +663,6 @@ async function loadCommentsFromBackend() {
     } catch (error) {
         console.error('❌ Error loading comments:', error);
         
-        // Fallback to localStorage
         const stored = localStorage.getItem('exam_countdown_comments');
         if (stored) {
             try {
@@ -684,34 +680,7 @@ async function loadCommentsFromBackend() {
     }
 }
 
-// Backend Connection Test
-async function testBackendConnection() {
-    try {
-        console.log('🧪 Testing backend connection...');
-        
-        const response = await fetch(BACKEND_GET_URL, {
-            headers: {
-                'X-Master-Key': CONFIG.BACKEND.API_KEY
-            }
-        });
-        
-        if (response.ok) {
-            const data = await response.json();
-            console.log('✅ Backend connection successful!', data);
-            showNotification('✅', 'Backend connected successfully!');
-            return true;
-        } else {
-            console.log('❌ Backend connection failed:', response.status);
-            showNotification('⚠️', 'Backend connection failed');
-            return false;
-        }
-    } catch (error) {
-        console.error('❌ Backend test error:', error);
-        showNotification('❌', 'Backend connection error');
-        return false;
-    }
-}
-
+// Enhanced Comment System with Edit & Delete
 function renderComments() {
     const commentsList = document.getElementById('commentsList');
     if (!commentsList) return;
@@ -721,11 +690,18 @@ function renderComments() {
         return;
     }
 
-    commentsList.innerHTML = comments.map(comment => `
-        <div class="comment-item">
+    commentsList.innerHTML = comments.map(comment => {
+        const isAuthor = comment.author === currentUser;
+        const isEdited = comment.lastEdited && comment.lastEdited !== comment.timestamp;
+        
+        return `
+        <div class="comment-item" data-comment-id="${comment.id}">
             <div class="comment-header">
                 <span class="comment-author">${comment.author}</span>
-                <span class="comment-time">${formatTime(comment.timestamp)}</span>
+                <span class="comment-time">
+                    ${formatTime(comment.timestamp)}
+                    ${isEdited ? ' (edited)' : ''}
+                </span>
             </div>
             <div class="comment-content">${comment.content}</div>
             <div class="comment-footer">
@@ -733,9 +709,24 @@ function renderComments() {
                     <i class="fas fa-heart"></i>
                     <span>${comment.likes}</span>
                 </button>
+                <button class="comment-action reply-btn" onclick="startReply(${comment.id}, '${comment.author}')">
+                    <i class="fas fa-reply"></i>
+                    <span>Reply</span>
+                </button>
+                ${isAuthor ? `
+                    <button class="comment-action edit-btn" onclick="startEdit(${comment.id})">
+                        <i class="fas fa-edit"></i>
+                        <span>Edit</span>
+                    </button>
+                    <button class="comment-action delete-btn" onclick="deleteComment(${comment.id})">
+                        <i class="fas fa-trash"></i>
+                        <span>Delete</span>
+                    </button>
+                ` : ''}
             </div>
         </div>
-    `).join('');
+        `;
+    }).join('');
 }
 
 function formatTime(timestamp) {
@@ -775,6 +766,118 @@ function toggleLike(commentId) {
     localStorage.setItem('exam_countdown_comments', JSON.stringify(comments));
 }
 
+// Start replying to a comment
+function startReply(commentId, authorName) {
+    replyingTo = commentId;
+    const commentInput = document.getElementById('commentInput');
+    if (commentInput) {
+        commentInput.placeholder = `Replying to ${authorName}...`;
+        commentInput.focus();
+    }
+    showNotification('↩️', `Replying to ${authorName}`);
+}
+
+// Start editing a comment
+function startEdit(commentId) {
+    const comment = comments.find(c => c.id === commentId);
+    if (!comment) return;
+
+    editingComment = commentId;
+    const commentInput = document.getElementById('commentInput');
+    const submitBtn = document.getElementById('commentSubmit');
+    
+    if (commentInput && submitBtn) {
+        commentInput.value = comment.content;
+        commentInput.focus();
+        submitBtn.textContent = 'Update Comment';
+        submitBtn.style.background = 'var(--warning)';
+    }
+    
+    showNotification('✏️', 'Editing your comment...');
+}
+
+// Cancel edit mode
+function cancelEdit() {
+    editingComment = null;
+    const commentInput = document.getElementById('commentInput');
+    const submitBtn = document.getElementById('commentSubmit');
+    
+    if (commentInput && submitBtn) {
+        commentInput.value = '';
+        commentInput.placeholder = 'ඔබේ අදහස් මෙහි ලියන්න...';
+        submitBtn.textContent = 'අදහස් යොමු කරන්න';
+        submitBtn.style.background = '';
+    }
+    
+    showNotification('❌', 'Edit cancelled');
+}
+
+// Delete a comment
+async function deleteComment(commentId) {
+    if (!confirm('Are you sure you want to delete this comment?')) {
+        return;
+    }
+
+    const commentIndex = comments.findIndex(c => c.id === commentId);
+    if (commentIndex === -1) return;
+
+    // Remove from local array
+    comments.splice(commentIndex, 1);
+    
+    // Update local storage
+    localStorage.setItem('exam_countdown_comments', JSON.stringify(comments));
+    
+    // Update display
+    renderComments();
+    updateCommentsCount();
+    
+    // Update backend
+    const backendSuccess = await updateBackendAfterDelete();
+    
+    if (backendSuccess) {
+        showNotification('✅', 'Comment deleted successfully!');
+    } else {
+        showNotification('⚠️', 'Comment deleted locally (Backend issue)');
+    }
+}
+
+// Update backend after delete
+async function updateBackendAfterDelete() {
+    try {
+        const getResponse = await fetch(BACKEND_GET_URL, {
+            headers: {
+                'X-Master-Key': CONFIG.BACKEND.API_KEY,
+                'X-Bin-Meta': false
+            }
+        });
+        
+        if (!getResponse.ok) return false;
+        
+        const existingData = await getResponse.json();
+        
+        const updateResponse = await fetch(BACKEND_PUT_URL, {
+            method: 'PUT',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-Master-Key': CONFIG.BACKEND.API_KEY
+            },
+            body: JSON.stringify({
+                ...existingData,
+                comments: comments,
+                lastUpdated: new Date().toISOString(),
+                totalComments: comments.length
+            })
+        });
+        
+        return updateResponse.ok;
+        
+    } catch (error) {
+        console.error('Backend delete update error:', error);
+        return false;
+    }
+}
+
+// Enhanced submit function with edit support
 async function submitComment() {
     const input = document.getElementById('commentInput');
     const submitBtn = document.getElementById('commentSubmit');
@@ -795,6 +898,95 @@ async function submitComment() {
     submitBtn.disabled = true;
     submitBtn.innerHTML = '<span class="loading-spinner"></span> යොමු කරමින්...';
 
+    try {
+        if (editingComment) {
+            // Edit existing comment
+            await editExistingComment(editingComment, content);
+        } else if (replyingTo) {
+            // Reply to comment (you can add this later)
+            showNotification('ℹ️', 'Reply feature coming soon!');
+        } else {
+            // New comment
+            await submitNewComment(content);
+        }
+        
+        input.value = '';
+        updateCharCount();
+        cancelEdit();
+        cancelReply();
+        
+    } catch (error) {
+        console.error('Submit comment error:', error);
+        showNotification('❌', 'Error submitting comment');
+    } finally {
+        submitBtn.disabled = false;
+        submitBtn.textContent = 'අදහස් යොමු කරන්න';
+        submitBtn.style.background = '';
+    }
+}
+
+// Edit existing comment
+async function editExistingComment(commentId, newContent) {
+    const comment = comments.find(c => c.id === commentId);
+    if (!comment) return;
+
+    // Update comment
+    comment.content = newContent;
+    comment.lastEdited = new Date().toISOString();
+    
+    // Update local storage
+    localStorage.setItem('exam_countdown_comments', JSON.stringify(comments));
+    
+    // Update display
+    renderComments();
+    
+    // Update backend
+    const backendSuccess = await updateBackendAfterEdit();
+    
+    if (backendSuccess) {
+        showNotification('✅', 'Comment updated successfully!');
+    } else {
+        showNotification('⚠️', 'Comment updated locally (Backend issue)');
+    }
+}
+
+// Update backend after edit
+async function updateBackendAfterEdit() {
+    try {
+        const getResponse = await fetch(BACKEND_GET_URL, {
+            headers: {
+                'X-Master-Key': CONFIG.BACKEND.API_KEY,
+                'X-Bin-Meta': false
+            }
+        });
+        
+        if (!getResponse.ok) return false;
+        
+        const existingData = await getResponse.json();
+        
+        const updateResponse = await fetch(BACKEND_PUT_URL, {
+            method: 'PUT',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-Master-Key': CONFIG.BACKEND.API_KEY
+            },
+            body: JSON.stringify({
+                ...existingData,
+                comments: comments,
+                lastUpdated: new Date().toISOString()
+            })
+        });
+        
+        return updateResponse.ok;
+        
+    } catch (error) {
+        console.error('Backend edit update error:', error);
+        return false;
+    }
+}
+
+// Submit new comment
+async function submitNewComment(content) {
     const newComment = {
         id: Date.now(),
         author: currentUser,
@@ -803,32 +995,27 @@ async function submitComment() {
         likes: 0
     };
 
-    try {
-        // 1. LOCAL STORAGE - ALWAYS SAVE
-        comments.unshift(newComment);
-        localStorage.setItem('exam_countdown_comments', JSON.stringify(comments));
-        
-        // 2. INSTANT DISPLAY
-        renderComments();
-        updateCommentsCount();
-        input.value = '';
-        updateCharCount();
-        
-        // 3. BACKEND UPLOAD - AUTO WORKING
-        const backendSuccess = await updateBackendWithComment(newComment);
-        
-        if (backendSuccess) {
-            showNotification('✅', 'අදහස සාර්ථකව යොමු කළා! සියලුම අයට පෙනේ! 🎉');
-        } else {
-            showNotification('⚠️', 'අදහස සුරකින ලදී! (Backend issue)');
-        }
-        
-    } catch (error) {
-        console.error('Submit comment error:', error);
-        showNotification('✅', 'අදහස සුරකින ලදී! (Local)');
-    } finally {
-        submitBtn.disabled = false;
-        submitBtn.textContent = 'අදහස් යොමු කරන්න';
+    comments.unshift(newComment);
+    localStorage.setItem('exam_countdown_comments', JSON.stringify(comments));
+    
+    renderComments();
+    updateCommentsCount();
+    
+    const backendSuccess = await updateBackendWithComment(newComment);
+    
+    if (backendSuccess) {
+        showNotification('✅', 'අදහස සාර්ථකව යොමු කළා! 🎉');
+    } else {
+        showNotification('⚠️', 'අදහස සුරකින ලදී! (Backend issue)');
+    }
+}
+
+// Cancel reply
+function cancelReply() {
+    replyingTo = null;
+    const commentInput = document.getElementById('commentInput');
+    if (commentInput) {
+        commentInput.placeholder = 'ඔබේ අදහස් මෙහි ලියන්න...';
     }
 }
 
@@ -971,7 +1158,6 @@ function createUserNameButton() {
 // Load Comments Function
 async function loadComments() {
     try {
-        // First show from localStorage (instant)
         const storedComments = localStorage.getItem('exam_countdown_comments');
         if (storedComments) {
             comments = JSON.parse(storedComments);
@@ -979,7 +1165,6 @@ async function loadComments() {
             updateCommentsCount();
         }
         
-        // Then load from backend (background)
         setTimeout(async () => {
             try {
                 await loadCommentsFromBackend();
@@ -1001,7 +1186,35 @@ function startCommentRefresh() {
         } catch (error) {
             console.error('Auto-refresh failed:', error);
         }
-    }, 30000); // 30 seconds
+    }, 30000);
+}
+
+// Backend Connection Test
+async function testBackendConnection() {
+    try {
+        console.log('🧪 Testing backend connection...');
+        
+        const response = await fetch(BACKEND_GET_URL, {
+            headers: {
+                'X-Master-Key': CONFIG.BACKEND.API_KEY
+            }
+        });
+        
+        if (response.ok) {
+            const data = await response.json();
+            console.log('✅ Backend connection successful!', data);
+            showNotification('✅', 'Backend connected successfully!');
+            return true;
+        } else {
+            console.log('❌ Backend connection failed:', response.status);
+            showNotification('⚠️', 'Backend connection failed');
+            return false;
+        }
+    } catch (error) {
+        console.error('❌ Backend test error:', error);
+        showNotification('❌', 'Backend connection error');
+        return false;
+    }
 }
 
 // Initialize App
@@ -1010,7 +1223,6 @@ async function initializeApp() {
     const defaultBatch = detectDefaultBatch();
     switchBatch(defaultBatch);
     
-    // Test backend connection first
     await testBackendConnection();
     
     loadComments();
@@ -1038,4 +1250,4 @@ setInterval(getDailyQuote, 3600000);
 // Initialize on load
 document.addEventListener('DOMContentLoaded', initializeApp);
 
-console.log('🚀 A/L & O/L Exam Countdown - UPDATED JSONBIN VERSION');
+console.log('🚀 A/L & O/L Exam Countdown - ENHANCED WITH EDIT/DELETE');
